@@ -6,8 +6,11 @@
   "scripts": {
     "test:web": "node --test web/tests/interaction.test.cjs web/tests/contract.test.cjs",
     "test:integration": "node --test integration/tests/combined.test.mjs integration/tests/native-projection.test.mjs",
-    "test": "npm run test:web && npm run test:integration",
-    "check": "node --check web/app.js && node --check web/contract-adapter.js && npm test"
+    "test:tools": "node --test scripts/tests/*.test.mjs",
+    "test": "npm run test:web && npm run test:integration && npm run test:tools",
+    "audit:imports": "node scripts/native-import-audit.mjs",
+    "gate:preflight": "node scripts/gate-preflight.mjs",
+    "check": "node --check web/app.js && node --check web/contract-adapter.js && npm run audit:imports && npm test"
   },
   "engines": {
     "node": ">=22"

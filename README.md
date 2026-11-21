@@ -22,3 +22,11 @@ Não inserir dados de jogadores, tokens, chaves ou configurações de produção
 ## Referências internas
 
 Os resultados anteriores CP035/037/038/039 permanecem preservados no Drive; apenas código, assets próprios e documentação útil foram consolidados aqui. Consulte `docs/ARCHITECTURE.md` e `docs/ASSETS.md` para limites/proveniência.
+
+## Gate técnico reproduzível (pré-verificação, não homologação)
+
+- `npm run audit:imports` confere **39 imports relativos** dos quatro candidatos contra um manifesto pinado de **28 módulos nativos do Core 6.2.0.b**; valida caminhos, nomes de exportações e hashes Git previamente verificados. Isso não é uma compilação do Core.
+- `npm run test:tools` testa a auditoria e o pré-verificador do CP027 em cenários sintéticos.
+- `npm run gate:preflight -- --source /checkout/Crownicles --gate /pasta/CP027` inspeciona **sem modificar** a disponibilidade de Node 24, Python 3.9+, MariaDB, Git, dependências instaladas e commit original. `READY` não significa 12/12 do CP027.
+
+A bateria de laboratório passa a ser **43 testes de web + 24 testes de integração simulada + 22 testes das ferramentas = 89 testes locais**; os 22 novos foram executados separadamente neste avanço, sem substituírem o gate real. Veja [instruções do CP027](docs/NATIVE-GATE.md). GitHub Actions continua pendente de diagnóstico de runner (#3).

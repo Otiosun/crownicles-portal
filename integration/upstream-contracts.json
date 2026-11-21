@@ -1,0 +1,179 @@
+{
+  "commit": "64d08c05f11949029317341735f6f73024f19f9b",
+  "verifiedAt": "2026-11-21",
+  "scope": "Static import-path and named-export check only; no Core typecheck/SQL",
+  "modules": {
+    "Core/src/core/database/game/models/Player.ts": {
+      "sha": "4861e85ab804eadd758c799650811bd7f978657c",
+      "exports": [
+        "Player"
+      ]
+    },
+    "Core/src/core/database/game/models/PetEntity.ts": {
+      "sha": "a407d214876925958ccdb0f99abcdc3cdc419bb7",
+      "exports": [
+        "PetEntity"
+      ]
+    },
+    "Core/src/core/database/game/models/PetExpedition.ts": {
+      "sha": "2b62ceb0019f7b43037a3086b561566da401f4c3",
+      "exports": [
+        "PetExpedition"
+      ]
+    },
+    "Core/src/core/database/game/models/PlayerTalismans.ts": {
+      "sha": "3eaba6f0c329973962c86c349fb73839a006d853",
+      "exports": [
+        "PlayerTalismans"
+      ]
+    },
+    "Core/src/core/database/game/models/Guild.ts": {
+      "sha": "e08888b856cd73418556fb8aa7ab0b259bf3cd69",
+      "exports": [
+        "Guild"
+      ]
+    },
+    "Core/src/core/utils/CommandUtils.ts": {
+      "sha": "0dfa36212883b3fa1619625ca4b12975171e9bc2",
+      "exports": [
+        "CommandUtils"
+      ]
+    },
+    "Lib/src/constants/ExpeditionConstants.ts": {
+      "sha": "90fe660f51dcc220651f179c277f3f85b808bbbf",
+      "exports": [
+        "ExpeditionConstants",
+        "ExpeditionLocationType"
+      ]
+    },
+    "Lib/src/constants/GuildDomainConstants.ts": {
+      "sha": "14fd9208a7f48ead5767e1e7915d34a0767603c8",
+      "exports": [
+        "GuildDomainConstants"
+      ]
+    },
+    "Lib/src/constants/PetConstants.ts": {
+      "sha": "0d7146050f7109ec160f6fd372bc396ccfe57c85",
+      "exports": [
+        "PetConstants"
+      ]
+    },
+    "Lib/src/packets/commands/CommandPetPacket.ts": {
+      "sha": "86fd4a2bb69d67b9a8c4a6a215bd38f96d14e916",
+      "exports": [
+        "CommandPetPacketRes",
+        "PetExpeditionInfo"
+      ]
+    },
+    "Lib/src/packets/commands/CommandGuildStoragePacket.ts": {
+      "sha": "c792f10d0897885951782a755a6156638c6555d3",
+      "exports": [
+        "CommandGuildStoragePacketRes",
+        "FoodStorage"
+      ]
+    },
+    "Core/src/core/database/game/models/Home.ts": {
+      "sha": "1a82c9a9a9c307521834fc374c1b24248e582a9e",
+      "exports": [
+        "Home"
+      ]
+    },
+    "Core/src/core/database/game/models/HomeGardenSlot.ts": {
+      "sha": "3f5cdc93f965cc7400e5b36aff218b24124ade8b",
+      "exports": [
+        "HomeGardenSlot"
+      ]
+    },
+    "Core/src/core/database/game/models/HomePlantStorage.ts": {
+      "sha": "7e96a16fdec928d78f3bc42e6aaf82800948df4e",
+      "exports": [
+        "HomePlantStorage"
+      ]
+    },
+    "Core/src/core/database/game/models/PlayerPlantSlot.ts": {
+      "sha": "d9c54405d0aa5d69113be9b06204e787b1894c18",
+      "exports": [
+        "PlayerPlantSlot"
+      ]
+    },
+    "Core/src/core/database/game/models/InventoryInfo.ts": {
+      "sha": "f21e98ad5bc246fbd4773e7d09f4c7e32edee420",
+      "exports": [
+        "InventoryInfo"
+      ]
+    },
+    "Core/src/core/maps/Maps.ts": {
+      "sha": "bc8a03a215dfc247b6a7af8999e2fc7096ccfd8d",
+      "exports": [
+        "Maps"
+      ]
+    },
+    "Lib/src/types/WhereAllowed.ts": {
+      "sha": "c2372bfd75c5149a96bee14009fefd2947b709ca",
+      "exports": [
+        "WhereAllowed"
+      ]
+    },
+    "Lib/src/types/GardenAccessMode.ts": {
+      "sha": "54318036e6ed2dc52a8ea1a43c310e39cb3e6214",
+      "exports": [
+        "GardenAccessMode"
+      ]
+    },
+    "Lib/src/constants/GardenConstants.ts": {
+      "sha": "31bcdb1d156901fabf727070ce61f62387b45065",
+      "exports": [
+        "GardenConstants"
+      ]
+    },
+    "Lib/src/constants/PlantConstants.ts": {
+      "sha": "5caf1c712ab49ca449f6f4210aed39c147c24ae7",
+      "exports": [
+        "PlantConstants",
+        "PLANT_SLOT_TYPE"
+      ]
+    },
+    "Lib/src/constants/TimeConstants.ts": {
+      "sha": "f362c0e621c32ba866153eb1618adcdfa4147fe2",
+      "exports": [
+        "TimeConstants"
+      ]
+    },
+    "Core/src/core/database/game/models/HomeChestSlot.ts": {
+      "sha": "462d67889c6fedf04eed966ec766631d66651d86",
+      "exports": [
+        "HomeChestSlot"
+      ]
+    },
+    "Core/src/core/database/game/models/Apartment.ts": {
+      "sha": "e2071c6f4108496c6d4235f167f8eee327091211",
+      "exports": [
+        "Apartment"
+      ]
+    },
+    "Core/src/data/City.ts": {
+      "sha": "f98e4f90c3b15f47e8501de72fe073125a716fc1",
+      "exports": [
+        "CityDataController"
+      ]
+    },
+    "Lib/src/constants/ItemConstants.ts": {
+      "sha": "5a86aa9a542373d8bd2a53a6fbc8c0e8821b5cd4",
+      "exports": [
+        "ItemCategory"
+      ]
+    },
+    "Lib/src/constants/HomeConstants.ts": {
+      "sha": "183191b9a963be2c7e61fe6676aa5997cecbcc91",
+      "exports": [
+        "HomeConstants"
+      ]
+    },
+    "Lib/src/types/ItemWithDetails.ts": {
+      "sha": "e9825ed031dbff4d9ea946eeecaad3a503375d9c",
+      "exports": [
+        "ItemWithDetails"
+      ]
+    }
+  }
+}
