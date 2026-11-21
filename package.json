@@ -1,0 +1,13 @@
+{
+  "name": "crownicles-portal",
+  "private": true,
+  "version": "0.0.0-lab",
+  "description": "Crownicles Portal — independent visual and read-only-contract laboratory",
+  "scripts": {
+    "test": "node --test web/tests/interaction.test.cjs web/tests/contract.test.cjs",
+    "check": "node --check web/app.js && node --check web/contract-adapter.js && npm test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
