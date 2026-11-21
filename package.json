@@ -1,0 +1,21 @@
+{
+  "name": "crownicles-portal",
+  "private": true,
+  "version": "0.0.0-lab",
+  "description": "Crownicles Portal — independent visual and read-only-contract laboratory",
+  "scripts": {
+    "test:web": "node --test web/tests/interaction.test.cjs web/tests/contract.test.cjs",
+    "test:integration": "node --test integration/tests/combined.test.mjs integration/tests/native-projection.test.mjs",
+    "test:tools": "node --test scripts/tests/*.test.mjs",
+    "test": "npm run test:web && npm run test:integration && npm run test:tools",
+    "audit:imports": "node scripts/native-import-audit.mjs",
+    "gate:preflight": "node scripts/gate-preflight.mjs",
+    "check": "node --check web/app.js && node --check web/contract-adapter.js && npm run audit:imports && npm test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}

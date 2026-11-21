@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="dark light" name="color-scheme"/>
+<meta content="#111f1d" name="theme-color"/>
+<title>Crownicles — Diário da Jornada | protótipo de cinco áreas</title>
+<meta content="Protótipo offline de cinco áreas do portal Crownicles em uma única identidade pictórica. Dados demonstrativos." name="description"/>
+<link href="./style.css" rel="stylesheet"/>
+<script defer="" src="./contract-adapter.js"></script>
+<script defer="" src="./app.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+<div class="shell">
+<header class="site-header">
+<div aria-label="Crownicles, estudo visual" class="site-brand">
+<span aria-hidden="true" class="brand-mark"><span class="brand-core">✦</span></span>
+<span class="brand-word"><strong>CROWNICLES</strong><span>O DIÁRIO DA JORNADA</span></span>
+</div>
+<nav aria-label="Áreas do estudo. No celular, deslize para acessar todas as áreas." class="main-nav"><button aria-current="page" class="nav-option" data-view="profile" type="button"><span class="nav-no">01</span> Personagem</button><button class="nav-option" data-view="inventory" type="button"><span class="nav-no">02</span> Pertences</button><button class="nav-option" data-view="companion" type="button"><span class="nav-no">03</span> Companheiro</button><button class="nav-option" data-view="garden" type="button"><span class="nav-no">04</span> Jardim</button><button class="nav-option" data-view="property" type="button"><span class="nav-no">05</span> Patrimônio</button></nav><span aria-hidden="true" class="nav-hint">DESLIZE PARA VER MAIS  →</span>
+<div class="header-tail">
+<span aria-hidden="true" class="live-dot"></span>
+<span class="lab-note">ESTUDO VISUAL <span>·</span> DADOS SINTÉTICOS</span>
+</div>
+</header>
+<main id="conteudo">
+<div class="section-intro">
+<span>✳ UMA IDENTIDADE · CINCO ÁREAS</span>
+<span class="section-id" id="section-id">CAPÍTULO I — A VIAJANTE</span>
+</div>
+<section aria-live="off" class="experience" id="experience">
+<div class="content-side" id="content-side">
+<div aria-hidden="true" class="content-ruler"><span class="tiny-star">✳</span><span class="ruler-line"></span><span>CRÔNICA</span></div>
+<div class="heading-stack" id="heading-stack">
+<p class="eyebrow" id="eyebrow">CADERNO DE CAMPO <span>·</span> Nº 001</p>
+<h1 id="page-title">Todo caminho<br/><em>deixa marcas.</em></h1>
+<p class="lead" id="lead">Uma vida medida não apenas por vitórias, mas por tudo o que se escolheu carregar.</p>
+</div>
+<div id="profile-section">
+<div class="identity-line"><span aria-hidden="true" class="identity-symbol">❧</span><span class="identity-text"><strong>Viajante</strong><small>Retrato ilustrativo · identidade não oficial</small></span><span class="identity-level">NÍVEL <b>12</b></span></div>
+<div aria-label="Atributos principais" class="three-facts">
+<div><small>SAÚDE</small><strong>80 <span>/ 100</span></strong><div class="meter"><span style="width:80%"></span></div></div>
+<div><small>ENERGIA</small><strong>3 <span>/ 8</span></strong><div class="meter"><span style="width:37.5%"></span></div></div>
+<div><small>EXPERIÊNCIA</small><strong>10 <span>/ 20</span></strong><div class="meter"><span style="width:50%"></span></div></div>
+</div>
+<div aria-label="Resumo do personagem" class="ruled-facts">
+<div class="ruled-row"><span>Classe</span><strong>Soldado de infantaria</strong></div>
+<div class="ruled-row"><span>Destino registrado</span><strong>Floresta do Vieillard <span class="inline-asterisk">✳</span></strong></div>
+<div class="ruled-row"><span>Ataque / Defesa / Velocidade</span><strong>10 <span class="slash">/</span> 9 <span class="slash">/</span> 0</strong></div>
+</div>
+</div>
+<div hidden="" id="inventory-section">
+<div class="inventory-controls">
+<label class="search-label" for="search-items">LOCALIZAR UM PERTENCE</label>
+<div class="search-wrap"><span aria-hidden="true">⌕</span><input autocomplete="off" id="search-items" maxlength="90" placeholder="Nome do objeto…" type="search"/><kbd aria-hidden="true">/</kbd></div>
+<div aria-label="Filtrar por tipo" class="filter-strip" id="filter-strip">
+<button aria-pressed="true" class="filter-option" data-filter="all" type="button">Tudo</button>
+<button aria-pressed="false" class="filter-option" data-filter="equipment" type="button">Equipamentos</button>
+<button aria-pressed="false" class="filter-option" data-filter="potion" type="button">Poções</button>
+<button aria-pressed="false" class="filter-option" data-filter="material" type="button">Materiais</button>
+<button aria-pressed="false" class="filter-option" data-filter="other" type="button">Outros</button>
+</div>
+</div>
+<div aria-label="Objetos de demonstração" class="inventory-list" id="inventory-list"></div>
+<p class="inventory-count" id="inventory-count"></p>
+</div>
+<div class="domain-section" hidden="" id="companion-section">
+<div class="identity-line"><span aria-hidden="true" class="identity-symbol">❦</span><span class="identity-text"><strong id="pet-name">Companheiro</strong><small>Retrato ambiental ilustrativo, não vinculado à espécie real</small></span><span class="identity-level">AMOR <b id="pet-love">—</b></span></div>
+<div aria-label="Indicadores do companheiro" class="three-facts"><div><small>TIPO NATIVO</small><strong id="pet-type">—</strong></div><div><small>RARIDADE</small><strong id="pet-rarity">—</strong></div><div><small>EXPEDIÇÃO</small><strong class="text-stat" id="pet-expedition">—</strong></div></div>
+<div aria-label="Registro do companheiro" class="ruled-facts"><div class="ruled-row"><span>Talismã</span><strong id="pet-talisman">—</strong></div><div class="ruled-row"><span>Vínculo</span><strong id="pet-bond">—</strong></div><div class="ruled-row"><span>Gestão</span><strong>Somente pelo jogo</strong></div></div>
+<p class="source-note">O tipo é mostrado pelo ID do Core: a ilustração desta página não substitui a arte oficial do animal.</p>
+<div class="domain-status" hidden="" id="pet-status"></div>
+</div>
+<div class="domain-section" hidden="" id="garden-section">
+<div class="identity-line"><span aria-hidden="true" class="identity-symbol">❧</span><span class="identity-text"><strong>Jardim da residência</strong><small id="garden-access">Modo de acesso · —</small></span><span class="identity-level">LOTE <b id="garden-plots">—</b></span></div>
+<div aria-label="Resumo do jardim" class="compact-summary" id="garden-summary"></div>
+<p class="field-label">CANTEIROS REGISTRADOS</p><div aria-label="Selecionar canteiro para inspeção" class="garden-plots" id="garden-plots-list"></div>
+<div class="ruled-facts short-facts"><div class="ruled-row"><span>Semente transportada</span><strong id="garden-seed">—</strong></div><div class="ruled-row"><span>Próxima rega</span><strong id="garden-watering">—</strong></div></div>
+<p class="source-note">Plantio, rega e colheita permanecem no jogo. As porcentagens são parte da demonstração, não uma contagem ativa.</p>
+<div class="domain-status" hidden="" id="garden-status"></div>
+</div>
+<div class="domain-section" hidden="" id="property-section">
+<div class="identity-line"><span aria-hidden="true" class="identity-symbol">⌂</span><span class="identity-text"><strong>Residência principal</strong><small id="home-city">Localização em demonstração</small></span><span class="identity-level">NÍVEL <b id="home-level">—</b></span></div>
+<div aria-label="Características da residência" class="compact-summary" id="home-summary"></div>
+<p class="field-label">IMÓVEIS EM SEU NOME</p><div aria-label="Apartamentos para consulta" class="property-list" id="property-list"></div>
+<div class="ruled-facts short-facts"><div class="ruled-row"><span>Valor mínimo de resgate</span><strong id="minimum-rent">—</strong></div><div class="ruled-row"><span>Gestão de imóveis</span><strong>Somente pelo jogo</strong></div></div>
+<p class="source-note">O valor acumulado e a condição de resgate são apenas uma fotografia dos dados. Não há botão de recebimento neste portal.</p>
+<details class="chest-inspection" id="chest-inspection"><summary><span>Baú da residência</span><small id="chest-summary">Somente consulta</small></summary><div class="chest-items" id="chest-items"></div><p>Sem transferência de objetos por esta página. Acesso e conteúdo dependem das regras do Crownicles.</p></details>
+<div class="domain-status" hidden="" id="property-status"></div>
+</div>
+<div class="content-footer"><span>UM UNIVERSO, CINCO LEITURAS</span><button aria-pressed="true" class="subtle-link" id="toggle-art" type="button">Ocultar ilustração <span aria-hidden="true">↗</span></button></div>
+</div>
+<div class="scene-side" id="scene-side">
+<div aria-hidden="true" class="scene-forest"></div>
+<div aria-hidden="true" class="scene-haze"></div>
+<div aria-hidden="true" class="scene-geometry"><span class="geo-left"></span><span class="geo-right"></span></div>
+<div class="scene-smallprint scene-top"><span id="scene-overline">O RETRATO DE UMA JORNADA</span><span id="scene-counter">01 <i>/</i> 02</span></div>
+<div aria-label="Ilustração conceitual da viajante" class="visual-centre" id="visual-centre">
+<img alt="Retrato conceitual de uma viajante com capa verde e branca, bolsa de couro e livro" class="portrait-art" fetchpriority="high" id="scene-art" src="./assets/portrait.webp"/>
+<div aria-hidden="true" class="visual-fallback" hidden="" id="visual-fallback"><span class="fallback-sigil">✦</span><span id="fallback-number">—</span></div>
+</div>
+<div class="scene-caption" id="profile-scene-caption">
+<div class="scene-caption-inner"><span class="scene-chapter">FIG. I <b>✦</b> A VIAJANTE</span><div class="caption-line"></div><span class="scene-note">Uma figura pode representar uma história, não a aparência de um jogador.</span></div>
+</div>
+<div class="object-caption" hidden="" id="detail-scene-caption">
+<div class="object-caption-head"><span id="scene-detail-label">OBJETO EM FOCO</span><span id="object-index">01 / 08</span></div>
+<div class="object-caption-body"><h2 id="object-name">Cristal de ametista</h2><p id="object-subtitle">Material · 3 unidades registradas</p><div class="object-facts" id="object-facts"></div></div>
+<div class="object-controls"><button aria-label="Ver objeto anterior" id="previous-item" type="button">← <span>ANTERIOR</span></button><span aria-hidden="true" class="object-diamond">✦</span><button id="next-item" type="button"><span>PRÓXIMO</span> →</button></div>
+</div>
+<div class="scene-frame"><span>ESTUDO / 001</span><span>ILUSTRAÇÕES CONCEITUAIS · LABORATÓRIO</span></div>
+</div>
+</section>
+<section aria-labelledby="afterword-title" class="afterword">
+<div aria-hidden="true" class="afterword-decoration">✳</div>
+<div><p class="eyebrow">UMA SÓ DIREÇÃO · SEM TEMAS PARALELOS</p><h2 id="afterword-title">O mesmo mundo, <em>múltiplas leituras.</em></h2></div>
+<p>Laboratório de leitura e composição em cinco superfícies. Dados inventados para demonstração; nenhuma operação consulta ou altera o RPG. As imagens não pretendem representar objetos, cidades ou animais específicos do jogador.</p>
+</section><details class="lab-states" id="lab-states"><summary>Verificar estados de ausência e restrição <span>· laboratório</span></summary><p>Altera somente exemplos de companheiro, jardim e patrimônio. Não consulta o servidor.</p><div class="sample-buttons"><button aria-pressed="true" data-scenario="ready" type="button">Dados presentes</button><button aria-pressed="false" data-scenario="absent" type="button">Sem registro</button><button aria-pressed="false" data-scenario="restricted" type="button">Acesso restrito</button><button aria-pressed="false" data-scenario="not_initialized" type="button">Ainda não inicializado</button><button aria-pressed="false" data-scenario="unavailable" type="button">Indisponível</button></div></details>
+</main>
+<footer class="page-footer"><span>CROWNICLES · ESTUDO VISUAL CP037</span><span>DADOS SINTÉTICOS · SEM CONEXÃO AO RPG</span></footer>
+</div>
+<div aria-atomic="true" aria-live="polite" class="sr-only" id="announce"></div>
+</body>
+</html>
