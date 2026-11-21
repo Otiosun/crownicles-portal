@@ -1,19 +1,24 @@
 # Crownicles Portal
 
-Portal complementar ao RPG Crownicles no WhatsApp. Este repositório privado centraliza a interface pictórica editorial, seus contratos de leitura e os testes de integração.
+Portal complementar ao RPG **Crownicles**, com uma direção visual pictórica editorial universal. O RPG e seus dados permanecem sob autoridade do Crownicles Core; este repositório não substitui o bot WhatsApp.
 
-**Estado:** laboratório, sem conexão com jogadores reais e sem implantação. O Crownicles Core continua como única fonte de verdade.
+## Situação
 
-## Decisões de engenharia
+**Laboratório privado, sem implantação.** Cinco superfícies de navegação com dados sintéticos: personagem, inventário, companheiro, jardim e patrimônio/baú. Candidatos de consultas read-only separados da interface. O tema é uma única direção de trabalho, **ainda não homologada**.
 
-- Uma direção visual universal (fantasia pictórica editorial), ainda sujeita a aceite.
-- Personagem, inventário, companheiro, jardim e patrimônio compartilham a identidade e a navegação.
-- As consultas só podem operar com identidade derivada de uma sessão autenticada pelo servidor. A projeção no navegador **não substitui autorização**.
-- Nenhuma escrita ou simulação de ação de jogo é habilitada pelo portal.
-- O gate MariaDB/Core do CP027 permanece **0/12 testes reais executados**. Os testes HTTPS e os mocks locais não o substituem.
+### Executar localmente
 
-## Origem e rastreabilidade
+- Abra `web/index.html` para a versão de laboratório com assets separados. Não requer API.
+- `npm install` e `npm test` executam **43 testes de interface/contrato + 15 testes conjuntos de consultas simuladas**.
+- `npm run check` também verifica a sintaxe JS.
+- Opcional: `python3 -m pip install beautifulsoup4`, depois `python3 web/build_offline.py`, cria o `web/preview-offline.html` autocontido (não versionado).
 
-O material de partida vem dos checkpoints CP035 (consultas), CP037/038 (cinco superfícies e proteção de estados), CP039 (reparos de contratos e HTTPS de laboratório), preservados no Drive do projeto. O conteúdo será importado por uma branch/PR de consolidação, sem copiar os ZIPs inteiros ou fontes de terceiros.
+## Segurança e integração
 
-Não inserir chaves, tokens, senhas, dados pessoais dos jogadores ou configuração de produção no Git.
+O backend verdadeiro **ainda não foi integrado**. `web/contract-adapter.js` filtra respostas para exibição, mas **não autoriza acesso**. Os módulos em `integration/candidates` têm imports relativos ao checkout do Crownicles Core 6.2.0.b e só podem ser instalados após compilação e testes no Core real. **CP027: 0/12 testes MariaDB nativos executados**. CP039 realizou HTTPS local com runtime V31 e modelos de consulta simulados; não comprovou Keycloak/OIDC + MariaDB.
+
+Não inserir dados de jogadores, tokens, chaves ou configurações de produção. Nenhum deploy/integração live deve ser ativado a partir desta branch.
+
+## Referências internas
+
+Os resultados anteriores CP035/037/038/039 permanecem preservados no Drive; apenas código, assets próprios e documentação útil foram consolidados aqui. Consulte `docs/ARCHITECTURE.md` e `docs/ASSETS.md` para limites/proveniência.

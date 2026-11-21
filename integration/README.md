@@ -5,3 +5,5 @@ Fontes de CP035, com o reparo de ordem dos alimentos do CP039 em `PortalCompanio
 A instalação deve acontecer apenas em checkout descartável do Core compatível, com autenticação server-side, transação consistente, checagem de proprietário e gate MariaDB real. Os 75/75 testes de CP035 são de laboratório com ORM simulado, não certificação de DB. Não registrar rotas nem ações de jogo automaticamente.
 
 O CP027 segue com **0/12 testes nativos MariaDB concluídos**.
+
+`npm run test:integration` executa 15 verificações combinadas com ORM simulado. Requer TypeScript 5.8.3 instalado por `npm install`. O pacote CP039 mantém testes adicionais que dependem de fixtures V31/CP017 não importadas nesta base inicial.
