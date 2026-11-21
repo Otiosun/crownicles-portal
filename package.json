@@ -5,7 +5,7 @@
   "description": "Crownicles Portal — independent visual and read-only-contract laboratory",
   "scripts": {
     "test:web": "node --test web/tests/interaction.test.cjs web/tests/contract.test.cjs",
-    "test:integration": "node --test integration/tests/combined.test.mjs",
+    "test:integration": "node --test integration/tests/combined.test.mjs integration/tests/native-projection.test.mjs",
     "test": "npm run test:web && npm run test:integration",
     "check": "node --check web/app.js && node --check web/contract-adapter.js && npm test"
   },

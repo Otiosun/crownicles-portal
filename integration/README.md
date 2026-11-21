@@ -6,4 +6,4 @@ A instalação deve acontecer apenas em checkout descartável do Core compatíve
 
 O CP027 segue com **0/12 testes nativos MariaDB concluídos**.
 
-`npm run test:integration` executa 15 verificações combinadas com ORM simulado. Requer TypeScript 5.8.3 instalado por `npm install`. O pacote CP039 mantém testes adicionais que dependem de fixtures V31/CP017 não importadas nesta base inicial.
+`npm run test:integration` executa **24 verificações**: 15 de isolamento/composição com ORM simulado e 9 cruzando os cinco leitores TS transpilados com o adaptador real de `web/contract-adapter.js`. Requer TypeScript 5.8.3 instalado por `npm install`. A fixture compartilhada (`integration/tests/fixture.mjs`) representa o formato nativo `OwnedPet` e usa limites deliberadamente diferentes para alimentos herbívoros e carnívoros, detectando regressão da ordem de `PET_FOOD_BY_ID`. Os testes CP039 de HTTPS/V31 continuam preservados no Drive, mas não foram importados; não confundir esta suíte com HTTPS ou banco real.

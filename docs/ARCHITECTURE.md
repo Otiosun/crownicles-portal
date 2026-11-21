@@ -15,4 +15,6 @@
 - CP038: proteção de estados, contrato de projeção client-side.
 - CP039: correção de IDs nativos da despensa e estoque de plantas, integração HTTPS de laboratório.
 
+Validação local adicional após migração: **43 testes web + 24 testes de integração simulada e projeção conjunta = 67/67**. Isso não mede comportamento de MariaDB/Keycloak ou navegador real. A execução inicial do GitHub Actions falhou antes da alocação de runner; a repetição falhou do mesmo modo, sem etapas executadas. Consultar issue #3 para diagnóstico, sem atribuir a falha ao código sem logs.
+
 Os pacotes completos de auditoria/histórico permanecem no Drive do projeto.
