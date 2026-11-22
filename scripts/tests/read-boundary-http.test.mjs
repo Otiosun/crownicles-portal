@@ -60,3 +60,15 @@ test('HTTP loopback rejects framed GET body without trusting request.body proper
   assert.equal(seen.length,0);
  });
 });
+
+test('HTTP duplicate Authorization fields cannot be laundered through Node header normalization',async()=>{
+ await httpHarness(async({base,seen})=>{
+  const u=new URL(base);
+  const r=await new Promise((resolve,reject)=>{
+   const req=http.request({host:'127.0.0.1',port:u.port,path,method:'GET',headers:{Authorization:['Bearer A','Bearer B']}},res=>{
+    let body='';res.on('data',part=>body+=part);res.on('end',()=>resolve({status:res.statusCode,body}));
+   });req.on('error',reject);req.end();
+  });
+  assert.equal(r.status,400);assert.deepEqual(JSON.parse(r.body),{state:'unavailable'});assert.equal(seen.length,0);
+ });
+});
