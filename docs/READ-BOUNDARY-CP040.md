@@ -20,7 +20,7 @@ Incremento isolado, sem alterar Crownicles Core, bot, dados de jogadores, `web/`
 | Sem cookie/Bearer, credencial inválida ou falha no verificador | 401 |
 | Rota diferente | 404 |
 | Método não GET | 405, `Allow: GET` |
-| Query extra, seção duplicada, body, URL/header ambíguos | 400 |
+| Query extra, seção duplicada, body, URL/header ambíguos ou cookie+Bearer simultâneos | 400 |
 | Erro SQL, contrato inválido, seção extra/omissa, resposta excessiva | 503 |
 
 O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, resposta SQL ou dados parciais. Todas as respostas incluem `Cache-Control: private, no-store`, `Vary: Cookie, Authorization`, `X-Content-Type-Options: nosniff` e `Cross-Origin-Resource-Policy: same-origin`, sem CORS permissivo. O teto é **128 KiB após projeção**; isso não substitui limites de queries, deadline ou memória.
@@ -31,7 +31,7 @@ O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, re
 node --test scripts/tests/read-boundary.test.mjs
 ```
 
-Há **28 testes Node** cobrindo autorização por sujeito, falsificação de IDs do navegador, credenciais inconsistentes, falhas de resolvedor/SQL, respostas parciais, consultas inválidas, cabeçalhos duplicados, serialização sanitizada e anti-cache. O arquivo já entra no glob existente de `npm run test:tools`. O ambiente de teste injeta doubles do resolvedor e leitor, **não** Keycloak/MariaDB. A execução local isolada fora do repositório usou um stand-in de projeção; a suíte da branch usa o adaptador real do repositório e **ainda depende de execução integral confirmada**. GitHub Actions segue bloqueado antes do runner.
+Há **32 testes Node de fronteira + 3 cenários HTTP loopback** cobrindo autorização por sujeito, falsificação de IDs do navegador, credenciais inconsistentes, falhas de resolvedor/SQL, respostas parciais, consultas inválidas, cabeçalhos duplicados, serialização sanitizada e anti-cache. Os arquivos já entram no glob existente de `npm run test:tools`. A execução local isolada em Node 22 passou **35/35** com o adaptador real de projeção copiado byte a byte (Git blob `c70b2cde80df8542eff7630470091f05a4e088e4`); usa doubles de sessão e leitor, **não** Keycloak/MariaDB. Os **5 testes adicionais de integração** em `scripts/tests/read-boundary-integration.test.mjs` ligam a fronteira aos quatro candidatos TypeScript efetivos via fixture do repositório, mas **não foram executados nesta rodada** por falta de checkout completo nesse ambiente. Assim, existem 40 testes novos versionados, dos quais 35 têm execução local confirmada. O `npm run check` completo da branch e GitHub Actions continuam sem confirmação; Actions bloqueado antes do runner.
 
 ## Barreiras não dispensadas
 
