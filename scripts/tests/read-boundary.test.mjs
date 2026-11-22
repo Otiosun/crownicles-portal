@@ -39,7 +39,7 @@ test('valid request reads exact selected sections under authenticated subject',a
 });
 test('never uses browser supplied actor even when it looks like another valid UUID',async()=>{
  const {handle,seen}=make();
- const r=await handle(req({actor:B,actorId:B,userId:B,headers:{cookie:'x', 'X-User-Id':B,'x-subject':B}}));
+ const r=await handle(req({actor:B,actorId:B,userId:B,headers:{cookie:'sid=x', 'X-User-Id':B,'x-subject':B}}));
  assert.equal(r.status,200);assert.equal(seen.read[0].actor,A);
  assert.deepEqual(Object.keys(seen.auth[0]),['authorization','cookie']);
  assert.ok(!JSON.stringify(seen.read).includes(B));
@@ -49,8 +49,8 @@ test('no supplied cookie or bearer means no authenticator call and no database a
  assert.equal(r.status,401);assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
 });
 test('header names are case insensitive without forwarding identity-shaped headers',async()=>{
- const {handle,seen}=make();const r=await handle(req({headers:{CoOkIe:'opaque', 'X-Actor':B}}));
- assert.equal(r.status,200);assert.deepEqual(seen.auth[0],{authorization:null,cookie:'opaque'});
+ const {handle,seen}=make();const r=await handle(req({headers:{CoOkIe:'session=opaque', 'X-Actor':B}}));
+ assert.equal(r.status,200);assert.deepEqual(seen.auth[0],{authorization:null,cookie:'session=opaque'});
 });
 test('fetch Headers-style accessor works',async()=>{
  const {handle,seen}=make();const headers=new Headers({'authorization':'Bearer opaque'});
@@ -156,7 +156,7 @@ test('all outcomes use no-store and response body never echoes credentials',asyn
  }
 });
 test('duplicate credential spellings cannot ambiguously select an identity',async()=>{
- const {handle,seen}=make();const r=await handle(req({headers:{cookie:'A',Cookie:'B'}}));
+ const {handle,seen}=make();const r=await handle(req({headers:{cookie:'session=A',Cookie:'session=B'}}));
  assert.equal(r.status,400);assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
 });
 test('raw whitespace in URL is rejected instead of being normalized into a valid query',async()=>{
@@ -170,13 +170,13 @@ test('exotic request property getters fail closed without unhandled rejection',a
 });
 
 test('reject dual credentials rather than selecting a bearer or cookie actor ambiguously',async()=>{
- const {handle,seen}=make();const r=await handle(req({headers:{cookie:'A',authorization:'Bearer B'}}));
+ const {handle,seen}=make();const r=await handle(req({headers:{cookie:'session=A',authorization:'Bearer B'}}));
  assert.equal(r.status,400);assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
 });
 test('reject advertised GET bodies even when request.body property is not set',async()=>{
  const {handle,seen}=make();for(const headers of [
-  {cookie:'x','content-length':'42'}, {cookie:'x','transfer-encoding':'chunked'},
-  {cookie:'x','content-length':'not-a-number'}, {cookie:'x','content-length':'0','transfer-encoding':'chunked'}
+  {cookie:'sid=x','content-length':'42'}, {cookie:'sid=x','transfer-encoding':'chunked'},
+  {cookie:'sid=x','content-length':'not-a-number'}, {cookie:'sid=x','content-length':'0','transfer-encoding':'chunked'}
  ])assert.equal((await handle(req({headers}))).status,400);
  assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
 });
@@ -261,4 +261,15 @@ test('the nil UUID sentinel from a broken OIDC bridge is never a valid actor',as
  });
  const r=await handler(req());
  assert.equal(r.status,401);assert.equal(reads,0);
+});
+test('malformed Cookie syntax never reaches the verified session resolver',async()=>{
+ const {handle,seen}=make();
+ for(const cookie of [
+  'opaque','session','session=A; bare','session=A;','session=A; bad name=B',
+  'session=A; sid =B','=A','session=A; =B','session=A;sid',
+  'session=A; admin=@invalid; gone'
+ ]){
+  assert.equal((await handle(req({headers:{cookie}}))).status,400,JSON.stringify(cookie));
+ }
+ assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
 });
