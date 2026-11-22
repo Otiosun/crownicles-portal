@@ -31,3 +31,11 @@ Um manifesto desatualizado pode ainda conter 40 caracteres hexadecimais válidos
 ## Critério para integrar este laboratório
 
 Após revisão do diff e dos testes adversariais: integrar somente a ferramenta e sua documentação. Não alterar os candidatos TS, `main`, endpoint, visual, bot ou configuração de produção nesta etapa. Se o checkout original não estiver disponível, deixar o status `UPSTREAM_BLOB_AUDIT` como **não executado**, não como aprovado.
+
+## Proteção adicional: sintaxe real dos imports (AST)
+
+`npm run audit:syntax` agora faz parte de `npm run check`. Ela interpreta os quatro candidatos com o parser TypeScript 5.8.3, verifica as declarações de `import` efetivamente presentes na árvore sintática e compara a contagem dos imports relativos com o auditor de contrato já existente. Rejeita, de forma conservadora, imports com efeitos colaterais, importação default ou namespace, `import = require`, imports dinâmicos, chamadas `require`, reexportações, pacotes externos arbitrários, formas não suportadas e erros de sintaxe.
+
+A motivação é concreta: uma regex pode tratar um `import` escrito em comentário como se fosse código, ou não reconhecer outra forma de importação. A conferência AST é complementar; **não é análise de fluxo de dados, sandbox ou garantia de consultas somente leitura no banco**.
+
+Os novos testes de W06 passaram em laboratório: 8 adversariais de blobs, 3 com Git real descartável e 8 de sintaxe AST, total **19/19 novos**. O `npm run check` completo do PR depende de execução integrada; a infraestrutura GitHub Actions continua bloqueada antes de atribuir runner.
