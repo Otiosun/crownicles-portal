@@ -141,3 +141,17 @@ test('malformed independently present talisman values do not get coerced',()=>{
  const source=inventory();source.hasTalisman=0;
  assert.deepEqual(normalizeNativeP0Read('inventory',{state:'ready',packet:source}),{state:'unavailable'});
 });
+test('filled plant slot equal to maxPlantSlots fails closed (0-based capacity)',()=>{
+ const p=inventory();p.data.plants.plantSlots[0].slot=2;
+ assert.deepEqual(normalizeNativeP0Read('inventory',{state:'ready',packet:p}),{state:'unavailable'});
+});
+test('filled plant slot wildly outside maxPlantSlots fails closed',()=>{
+ const p=inventory();p.data.plants.plantSlots[0].slot=9000;
+ assert.deepEqual(normalizeNativeP0Read('inventory',{state:'ready',packet:p}),{state:'unavailable'});
+});
+test('empty plant slots allow zero plant capacity, seed is stored separately',()=>{
+ const p=inventory();p.data.plants.maxPlantSlots=0;p.data.plants.plantSlots=[];p.data.plants.seed=4;
+ const result=normalizeNativeP0Read('inventory',{state:'ready',packet:p});
+ assert.equal(result.state,'ready');assert.equal(result.data.plants.seed,4);
+ assert.equal(result.data.plants.maxPlantSlots,0);
+});
