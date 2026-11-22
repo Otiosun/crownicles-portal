@@ -79,3 +79,27 @@ test('a failed snapshot does not poison later successful requests or release ear
  assert.equal(good.status,200);assert.equal(good.payload.sections.chest.data.chestItems[0].details.id,42);
  assert.ok(!good.raw.includes('DONT_LEAK_DATABASE_ERROR'));
 });
+test('simultaneous A/B requests using one boundary keep response ownership isolated',async()=>{
+ const f=fixture();const handler=createPortalReadBoundary({
+  resolveVerifiedSubject:async({cookie})=>{
+   await Promise.resolve();return cookie==='A'?A:B;
+  },
+  readSnapshot:async({actor,sections})=>{
+   await Promise.resolve();return read(f,actor,sections);
+  }
+ });
+ const jobs=Array.from({length:40},(_,i)=>({
+  actor:i%2===0?A:B,cookie:i%2===0?'A':'B'
+ }));
+ const results=await Promise.all(jobs.map(async j=>({
+  actor:j.actor,response:await handler({method:'GET',url:'/api/portal/v1/read?sections=chest,pet,pantry',headers:{cookie:j.cookie}})
+ })));
+ assert.equal(results.length,40);
+ for(const {actor,response} of results){
+  assert.equal(response.status,200);
+  const value=JSON.parse(response.body);
+  assert.equal(value.sections.chest.data.chestItems[0].details.id,actor===A?42:70);
+  assert.equal(value.sections.pet.state,actor===A?'ready':'absent');
+  if(actor===B)assert.ok(!response.body.includes('Lumi'));
+ }
+});
