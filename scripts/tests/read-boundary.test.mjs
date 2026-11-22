@@ -205,3 +205,15 @@ test('accept valid RFC6750-style bearer format with opaque token alphabet',async
  assert.equal(r.status,200);assert.equal(seen.read.length,1);
  assert.deepEqual(seen.auth[0],{authorization:'bearer a-Z_123.+/~==',cookie:null});
 });
+
+test('duplicate request-cookie name and comma-merged credentials fail before verifier',async()=>{
+ const {handle,seen}=make();
+ for(const cookie of ['session=A; session=B','session=A, session=B','sid=A; sid=B; theme=dark',' =bad; sid=A']){
+  assert.equal((await handle(req({headers:{cookie}}))).status,400,cookie);
+ }
+ assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
+});
+test('distinct cookie names remain valid for the verifier to assess',async()=>{
+ const {handle,seen}=make();const r=await handle(req({headers:{cookie:'session=A; prefs=dark'}}));
+ assert.equal(r.status,200);assert.equal(seen.auth[0].cookie,'session=A; prefs=dark');
+});
