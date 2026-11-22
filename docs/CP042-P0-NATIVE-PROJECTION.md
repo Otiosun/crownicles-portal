@@ -36,6 +36,15 @@ Os pacotes de origem foram recuperados do Drive:
 
 `scripts/tests/p0-native-fuzz.test.mjs` executa **2.000 permutações determinísticas** de slot/capacidade com semente `0xC042BA5E` nas quatro categorias e confirma que apenas `0 < slot < capacity` produz resposta `ready`. Ainda verifica exclusão de campos internos em cada categoria e 120 alternâncias entre dados sintéticos e estado `restricted`, sem retenção de payload anterior. Os três testes são parte dos **25/25** acima, não se somam a eles. A cobertura é sintética; não é fuzzing exaustivo de modelos MariaDB.
 
+## Auditoria cruzada com PR #10 (ponte UX independente)
+
+A [ponte PR #10](https://github.com/Otiosun/crownicles-portal/pull/10) usa `integration/p0/projection-guard.mjs` em outra branch, não importada por este projetor. O contrato **não está automaticamente homologado entre as branches**. Duas incompatibilidades verificadas estaticamente:
+
+1. O guard só aceita `kind:'reported'` para talismãs com **três** booleanos obrigatórios; CP042 preserva a ausência de cada flag independentemente, conforme opcionais do pacote `CommandInventoryPacketRes`. A suíte diferencial do PR #10 rejeita explicitamente parcialidade CP012/014 antiga; é uma **decisão contratual a reconciliar**, não um bug demonstrado no jogo real.
+2. O guard valida `positive(r.slot)`, mas não impõe `r.slot<category.capacity`. Seu teste `Guard-03` adiciona reserva no **slot 2** com capacidade **2** e a aprova. Para demonstrar IDs duplicados em slots diferentes, o fixture deve declarar capacidade **3 ou maior**; reservar exatamente em `slot=capacity` deve falhar.
+
+A prova cruzada de **5/5 testes** CP042↔UX-P0-003 usa a máquina ESM e **não** o novo guard do PR #10. Pacote isolado no [Drive do projeto](https://drive.google.com/file/d/1ACQVYpfYj87jPYzESbSp_T5vOfXTzM_f/view), com fontes, fixture, TAP e hashes. A divergência foi registrada na issue #8 e no PR #10, sem editar o trabalho alheio.
+
 ## Gates ainda não cumpridos
 
 **Não houve execução MariaDB real (CP027 continua 0/12), não houve Keycloak/OIDC real, CI GitHub Actions, typecheck Core Node24/TS6, nem integração de HTTP/UX com jogadores.** O projetor puro deve permanecer separado do CP040 até que a leitura sob transação e identidade do servidor seja provada; o CP041 revalida sessão depois da consulta, mas continua sem implementação OIDC real. Não tratar \`ready\` da fixture como autorização.
