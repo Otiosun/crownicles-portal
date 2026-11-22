@@ -28,6 +28,7 @@ node --test scripts/tests/p0-native*.test.mjs
 Os pacotes de origem foram recuperados do Drive:
 - **CP012**: ID \`1ksMlpV-p91V4vOtD2u8JCCG_Xymn38go\`; SHA-256 ZIP \`edeff51402b55638818971b4dea75ad894120633d224b9e3c1315958ba11eb1b\`; **71/71 testes** locais de seu próprio laboratório.
 - **CP014**: ID \`1dMo8dZVsm9sH-9OH5OMZfSTWr3ZZ4flE\`; SHA-256 ZIP \`f74efef74fb65672a20d7f4d6d12378fd1bbaa4729ce7581e458c58bf0125e43\`; **83/83 testes** locais de seu laboratório.
+- `ItemCategory` canônico confirmado em `Lib/src/constants/ItemConstants.ts`, blob `5a86aa9a542373d8bd2a53a6fbc8c0e8821b5cd4`: enum sequencial `WEAPON=0, ARMOR=1, POTION=2, OBJECT=3`; não confundir com um catálogo de nomes/imagens. 
 - Fonte canônica fixada: \`Crownicles/Crownicles@64d08c05f11949029317341735f6f73024f19f9b\`; \`InventorySlot.ts\` blob SHA \`fda5fca65f061b9b81097ea7bc96b76e8796b8ec\`, \`InventoryInfo.ts\` blob SHA \`f21e98ad5bc246fbd4773e7d09f4c7e32edee420\`, \`InventoryConstants.ts\` blob SHA \`1e4c6b491bac12ce9cbf240ac02996a65c89e967\`.
 - UX field map: https://docs.google.com/document/d/1JlVQZFYtErWtFZ1XSBE_0rvZXRjEkfcM/edit ; UX-P0-003: https://docs.google.com/document/d/1cTLW7lDiALRSF5baqHTTRHZJmmzqNkXS/edit
 
