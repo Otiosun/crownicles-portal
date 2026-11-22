@@ -28,8 +28,10 @@ if(d.plants!==undefined){
  if(maxPlantSlots>3)fail();
  const plantSlots=unique(array(p.plantSlots).map(s=>{s=object(s);const slot=natural(s.slot);
   if(slot>=maxPlantSlots)fail();return {plantId:enumInt(positive(s.plantId),10),slot};}),'slot');
+ const linkedToHomeStorage=bool(p.linkedToHomeStorage);
+ if(linkedToHomeStorage&&maxPlantSlots<3)fail();
  result.plants={kind:'reported',...optional(p,'seed',v=>enumInt(positive(v),10)),plantSlots,
-  maxPlantSlots,linkedToHomeStorage:bool(p.linkedToHomeStorage)};
+  maxPlantSlots,linkedToHomeStorage};
 }else result.plants={kind:'not_reported'};return result;}
 function bar(v){v=object(v);return {value:finite(v.value),max:finite(v.max)}}
 // CP014: full native CommandProfilePacketRes.playerData contract. Explicit nested allowlists.

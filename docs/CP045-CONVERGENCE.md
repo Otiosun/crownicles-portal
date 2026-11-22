@@ -20,3 +20,6 @@ Em CP045, estas cinco expectativas passam a exigir que maxPlantSlots=0 seja inv�
 
 ## Próximo corte para o produto
 Auditar e aceitar o contrato de seção profile/inventory e as fontes oficiais de nome/catálogo/licença; executar testes em Core e MariaDB isolados com identidade de servidor e conta SELECT-only; executar UX P0 real com browser e jogadores. Não publicar endpoint/mutações nem avançar estilo do site antes dos gates.
+
+## CP045-B — Home/garden link one-way source invariant
+The pinned `Core/src/core/utils/PlantDeliveryUtils.ts` Git blob `cb649c5de3688c248e18680e58bc2c0a442f8ade` computes `isPlantInventoryLinkedToHome` using both `PlantConstants.hasHomeStorageLink(plantSlots)` and a home with a garden/positive storage capacity. Therefore `linkedToHomeStorage: true` is **impossible** when `maxPlantSlots<3`, but `maxPlantSlots===3` does **not** imply a link unless the player actually owns a home/garden. Both server projection and client guard now enforce ONLY this one-way invariant; they never fabricate a home or require the link at capacity 3. Four new regression cases: RED 2/4 on CP044 baseline; GREEN 4/4 after patch. Entire isolated local suite GREEN **171/171**, no skips; `npm run test:p0` GREEN **111/111** once the four cases are included.
