@@ -38,6 +38,26 @@ Além do limite de reserva, o guard passou a exigir `plants.plantSlots[].slot < 
 
 O conjunto local composto das suítes PR #10/12 (89), PR #11 (28) e dos diferenciais cruzados externos (12+6) foi executado conjuntamente e resultou **135/135 PASS**, sem sobreposição de nomes de casos. Isso é QA local de módulos/fixtures, não teste nativo de MariaDB, Core, Keycloak ou navegador real.
 
+## Prova vertical CP014 → HTTP loopback → ponte UX
+
+Além das 135 verificações locais de DTO/guard/ponte/CP042, foram executadas **14 novas provas de interoperabilidade**, usando os arquivos **originais** `gateway/{session-gateway,projection,fixture}.mjs` do ZIP CP014 (verificação SHA-256). Sete testes passam diretamente por `authorizedRead`: Perfil/Inventário prontos, A/B sintéticos, sessão revogada durante consulta, troca de epoch, dados legados inválidos retidos e campos ausentes preservados. Sete testes adicionais sobem HTTP loopback no endereço `127.0.0.1` e verificam 24 requisições concorrentes A/B, cookies repetidos, Authorization impróprio, logout seguido de 401, GET com `content-length` impróprio e método desconhecido. **14/14 PASS**, bateria agregada **149/149 PASS** após extração limpa.
+
+**Importante:** o servidor CP014 é HTTP local e injeta um ledger e repositório sintéticos. Não possui Keycloak real, MariaDB, TLS público ou sessões de jogadores. A execução end-to-end do navegador real permanece pendente. A suíte versionada deste PR continua **89/89** via `npm run test:p0`.
+
+O [pacote E2E no Drive privado](https://drive.google.com/file/d/1iBsWUgyS2YTx16K6lotl1a0hAbWYt38O/view) contém 27 arquivos com SHA-256 conferido (ZIP 61.875 bytes; SHA-256 `d350e18de0146c695433194f6c0dda2fe17f10bd159efeba5fe88c8309e8f506`), provas red/green, comandos e fontes CP014 sem mutação, sem credenciais reais.
+
+## Sensibilidade dos testes por mutação isolada
+
+Foram montados **três mutantes temporários** do guard original corrigido, todos fora da branch e descartados após teste:
+
+| Regressão intencional | Testes versionados CP043 que reprovam |
+|---|---|
+| Remover `r.slot < c.capacity` | 2 testes |
+| Permitir `reported` sem nenhuma flag | 3 testes |
+| Remover `s.slot < maxPlantSlots` | 2 testes |
+
+Os mutantes não foram enviados ao GitHub. Sem inferir cobertura completa de ataque ou prova formal de segurança.
+
 ## Dependências e decisão de integração
 
 Este PR é criado **sobre a branch do PR #10**, sem modificar a branch do outro trabalhador. Não pode ser mesclado automaticamente em `main`. Ao incorporar CP042 posteriormente, exigir teste diferencial servidor→DTO→guard→máquina UX com autenticação de sessão e versionamento do contrato. A prova de compatibilidade **não** é API pronta nem prova de segurança de dados reais.
