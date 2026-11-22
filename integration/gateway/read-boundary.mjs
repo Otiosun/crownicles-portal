@@ -72,6 +72,19 @@ function parseReadRequest(request){
     authorization=getCredential(request.headers,'authorization');
     cookie=getCredential(request.headers,'cookie');
   }catch{return {status:400};}
+  if(cookie){
+    // Duplicate request-cookie names (possibly from multiple Cookie headers)
+    // must not let different session parsers select different principals.
+    if(cookie.includes(',')) return {status:400};
+    const namesSeen=new Set();
+    for(const part of cookie.split(';')){
+      const equal=part.indexOf('=');
+      if(equal<0) continue; // opaque laboratory credential; real resolver validates
+      const name=part.slice(0,equal).trim();
+      if(!name||namesSeen.has(name)) return {status:400};
+      namesSeen.add(name);
+    }
+  }
   if(authorization&&cookie) return {status:400}; // no ambiguous dual principal
   return {sections:Object.freeze(names),credentials:Object.freeze({authorization,cookie})};
 }
