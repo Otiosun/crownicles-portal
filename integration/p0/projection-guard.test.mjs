@@ -25,7 +25,7 @@ test('Guard-02 detail ID0 remains legitimate in every active category',()=>{
  let i=inventory();for(const c of i.categories)assert.equal(c.active.id,0);accepts('inventory',i)
 });
 test('Guard-03 two reserve slots may contain the same item ID',()=>{
- let i=inventory();i.categories[0].reserves.push({slot:2,display:main(1)});accepts('inventory',i)
+ let i=inventory();i.categories[0].capacity=3;i.categories[0].reserves.push({slot:2,display:main(1)});accepts('inventory',i)
 });
 test('Guard-04 negative effect time and rank -1 retain native semantics',()=>{
  let p=profile();p.effect.timeLeft=-999999;p.rank.rank=-1;accepts('profile',p)
@@ -75,7 +75,7 @@ const cases=[
  ['support power malformed','inventory',i=>i.categories[2].active.power='10'],
  ['material bad quantity','inventory',i=>i.materials=[{materialId:1,quantity:0}]],
  ['material duplicated id','inventory',i=>i.materials=[{materialId:1,quantity:1},{materialId:1,quantity:2}]],
- ['talismans absent property','inventory',i=>i.talismans={kind:'reported',expedition:true,clone:false}],
+ ['reported talismans without flags','inventory',i=>i.talismans={kind:'reported'}],
  ['plant unknown vs none mismatch','inventory',i=>i.plants={kind:'not_reported',plantSlots:[]}],
  ['plant duplicated slot','inventory',i=>i.plants={kind:'reported',plantSlots:[{slot:1,plantId:1},{slot:1,plantId:2}],maxPlantSlots:2,linkedToHomeStorage:false}],
  ['seed zero invalid','inventory',i=>i.plants={kind:'reported',seed:0,plantSlots:[],maxPlantSlots:1,linkedToHomeStorage:false}],
