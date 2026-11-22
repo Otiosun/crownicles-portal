@@ -30,19 +30,30 @@ function validateTimeout(value,name){
  * is triggered; adapters MUST honor it and explicitly cancel/rollback SQL.
  * A stuck adapter ignoring the signal may keep working after the reply.
  */
-async function withDeadline(operation,timeoutMs){
+async function withDeadline(operation,timeoutMs,parentSignal){
   const controller=new AbortController();
-  let timer;
+  let timer, onParentAbort;
   const deadline=new Promise((_,reject)=>{
     timer=setTimeout(()=>{
       controller.abort();
       reject(new Error('PORTAL_DEADLINE_EXCEEDED'));
     },timeoutMs);
   });
+  const disconnected=new Promise((_,reject)=>{
+    if(!parentSignal)return;
+    onParentAbort=()=>{
+      controller.abort();
+      reject(new Error('PORTAL_CLIENT_DISCONNECTED'));
+    };
+    if(parentSignal.aborted)onParentAbort();
+    else parentSignal.addEventListener('abort',onParentAbort,{once:true});
+  });
   try {
-    return await Promise.race([Promise.resolve().then(()=>operation(controller.signal)),deadline]);
+    if(parentSignal?.aborted)throw Error('PORTAL_CLIENT_DISCONNECTED');
+    return await Promise.race([Promise.resolve().then(()=>operation(controller.signal)),deadline,disconnected]);
   } finally {
     clearTimeout(timer);
+    if(parentSignal&&onParentAbort)parentSignal.removeEventListener('abort',onParentAbort);
   }
 }
 const BASE_HEADERS=Object.freeze({
@@ -73,6 +84,7 @@ function getCredential(headers,name){
 }
 function parseReadRequest(request){
   if(!request || typeof request!=='object'||Array.isArray(request)) return {status:400};
+  if(request.signal!==undefined&&!(request.signal instanceof AbortSignal))return {status:400};
   // Node IncomingMessage may silently discard repeated Authorization headers.
   // rawHeaders retains them; prevent credential selection by parser behavior.
   if(request.rawHeaders!==undefined){
@@ -155,14 +167,17 @@ export function createPortalReadBoundary({
     if(parsed.status) return parsed.status===405?
       response(405,{state:'unavailable'},{Allow:'GET'}):unavailable(parsed.status);
     if(!parsed.credentials.authorization&&!parsed.credentials.cookie)return unavailable(401);
+    // Request.signal comes from a trusted HTTP adapter; client-provided headers
+    // never control it. A disconnected client must not start an expensive read.
+    if(request.signal?.aborted)return unavailable(503);
     let actor;
     try {
-      actor=await withDeadline(signal=>resolveVerifiedSubject(parsed.credentials,Object.freeze({signal})),authTimeoutMs);
-    }catch{return unavailable(401);}
+      actor=await withDeadline(signal=>resolveVerifiedSubject(parsed.credentials,Object.freeze({signal})),authTimeoutMs,request.signal);
+    }catch{return unavailable(request.signal?.aborted?503:401);}
     if(typeof actor!=='string'||!UUID.test(actor))return unavailable(401);
     let raw;
     try {
-      raw=await withDeadline(signal=>readSnapshot(Object.freeze({actor,sections:parsed.sections,now:new Date(),signal})),readTimeoutMs);
+      raw=await withDeadline(signal=>readSnapshot(Object.freeze({actor,sections:parsed.sections,now:new Date(),signal})),readTimeoutMs,request.signal);
     }catch{return unavailable(503);}
     let projected;
     try {projected=normalizeBundle(raw);}catch{return unavailable(503);}
