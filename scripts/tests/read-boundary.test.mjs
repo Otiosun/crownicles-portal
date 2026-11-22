@@ -280,3 +280,10 @@ test('valid session cookie names and values with padding are forwarded unchanged
  assert.equal(r.status,200);
  assert.equal(seen.auth[0].cookie,cookie);
 });
+test('aggregate raw HTTP header byte budget denies oversized unknown headers',async()=>{
+ const {handle,seen}=make();
+ const oversized={rawHeaders:['Accept','x'.repeat(17*1024)]};
+ const r=await handle(req(oversized));
+ assert.equal(r.status,400);
+ assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
+});
