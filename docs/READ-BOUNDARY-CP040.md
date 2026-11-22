@@ -148,6 +148,21 @@ Em cada caso o módulo original foi **restaurado**. Todos os 116 testes passaram
 5. Runner GitHub Actions funcional; revisão do código e aceite independente da direção artística.
 
 **Não conectar ao bot, registrar rota pública, publicar, fazer merge nem considerar a fronteira uma proteção operacional** enquanto faltarem os gates.
+## Fronteira de integração com UX-P0-003 — não confundir Chest e Inventory
+
+**Verificação cruzada em 22/11/2026:** o contrato UX-P0-003 ([fonte no Drive](https://docs.google.com/document/d/1cTLW7lDiALRSF5baqHTTRHZJmmzqNkXS/edit)) especifica a primeira jornada `Personagem → Pertences → Inspeção → Retorno` usando os leitores **CP014 `PortalProfileQuery`** e **CP012 `PortalInventoryQuery`**. O mapa nominal UX-P0-FIELD-MAP-002 ([fonte](https://docs.google.com/document/d/1JlVQZFYtErWtFZ1XSBE_0rvZXRjEkfcM/edit)) confirma que o inventário inclui equipamento ativo, reservas, materiais e plantas. Esses dois contratos **não** estão implementados nem incluídos em `readPortalSectionsForServer` da base do PR #1/CP040.
+
+A allowlist atual do CP040 tem exatamente `property,chest,garden,pet,pantry`. **`chest` é o baú da casa (`PortalPropertyQuery.readChestForPortal`), não o inventário do personagem.** Também não há seção `profile`. Portanto, CP040 **não satisfaz** a entrada Personagem nem a inspeção integral de Pertences. Não renomear `chest` para `inventory`, nem forjar um perfil a partir de `property`, `pet` ou do identificador Keycloak. Não expor o campo `keycloakId` na interface.
+
+**Contrato pendente separado para CP012/014, antes de expandir a allowlist**:
+1. Projeção do perfil com campos nativos e opcionais preservados, sem inventar nome público.
+2. Projeção de inventário que distinga `{category,slot,id}`, incluindo ID 0, reservas, materiais e plantas; catálogo de nomes e imagens ainda precisa de fonte canônica.
+3. Estados específicos `ready/restricted/not_initialized/unavailable` e rastreamento de `epoch`/`requestId` do UX-P0-003, sem confundir proteção da UI com autenticação do servidor.
+4. CP012/014 nativos em checkout Core pinado, transação real SELECT-only, gates CP027/Keycloak/CI, nova versão de DTO e testes A/B, stale responses e projeção completa.
+5. Aceite UX em DOM com foco/rolagem/teclado e usuários reais, independente dos testes de gateway.
+
+**Decisão de integração:** manter a allowlist CP040 intacta e o PR #6 como candidato isolado; não afirmar cobertura do P0 e não anexar os leitores CP012/014 diretamente sem gate de contratos. Nenhuma UI alterada nesta revisão.
+
 ## Handoff fechado desta sessão
 
 **Ponto de entrada para outra sessão:** abrir [PR #6](https://github.com/Otiosun/crownicles-portal/pull/6), conferir o head e executar `node scripts/reproduce-cp040.mjs` em checkout limpo com Node >=22 e TypeScript 5.8.3. Resultado esperado em 22/11: `CP040_UPSTREAM=9/9` e **116/116 PASS**. Se os arquivos herdados do PR-base mudarem, o reproducer irá bloquear por hash: reavaliar cada mudança conscientemente antes de atualizar o manifesto, em vez de remover a verificação.
