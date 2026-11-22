@@ -9,7 +9,7 @@ Incremento isolado, sem alterar Crownicles Core, bot, dados de jogadores, `web/`
 - Entrada: objeto `{method:'GET',url:'/api/portal/v1/read?sections=pet,garden',headers:{cookie:'...'}}` ou `Headers`. Saída: `{status,headers,body}`, sem escrita.
 - `resolveVerifiedSubject({authorization,cookie},{signal})` precisa verificar assinatura, emissor, audiência, expiração, revogação e sessão do Keycloak **no servidor**. Não é permitido aceitar JWT apenas decodificado, ID de usuário informado pelo cliente ou token de demonstração.
 - `readSnapshot({actor,sections,now,signal})` precisa usar identidade do resolvedor, transação real consistente e somente leitura, credenciais SELECT-only, predicados de propriedade, limites de consulta e tempo. Integrar a `readPortalSectionsForServer` apenas em checkout isolado e após gates apropriados.
-- `actor` vem exclusivamente do resolvedor de sessão verificada. Parâmetros/cabeçalhos com `actorId`, `userId`, `guildId`, `homeId`, `cityId` e similares **não conferem autorização** e não são encaminhados ao leitor.
+- O sujeito retornado deve ser um UUID sintaticamente válido e **não** pode ser o UUID NIL (`00000000-0000-0000-0000-000000000000`), que seria um sentinela inseguro de sessão ausente.\n- `actor` vem exclusivamente do resolvedor de sessão verificada. Parâmetros/cabeçalhos com `actorId`, `userId`, `guildId`, `homeId`, `cityId` e similares **não conferem autorização** e não são encaminhados ao leitor.
 - Antes de serializar, a resposta passa pelo `normalizeBundle` original em `web/contract-adapter.js`. A projeção copia somente propriedades permitidas e exige exatamente o conjunto de seções requisitado. Isso é **minimização de dados, não prova de propriedade**.
 
 ## Respostas previstas
@@ -20,7 +20,7 @@ Incremento isolado, sem alterar Crownicles Core, bot, dados de jogadores, `web/`
 | Sem cookie/Bearer, credencial inválida ou falha no verificador | 401 |
 | Rota diferente | 404 |
 | Método não GET | 405, `Allow: GET` |
-| Query extra, seção duplicada, body, URL/header ambíguos, Bearer malformado, cookies duplicados ou cookie+Bearer simultâneos | 400 |
+| Query extra, seção duplicada, body, URL/header ambíguos, Bearer malformado, cookies duplicados/malformados (nomes ASCII válidos e pares `nome=valor`) ou cookie+Bearer simultâneos | 400 |
 | Erro SQL, contrato inválido, seção extra/omissa, resposta excessiva, desconexão sinalizada | 503 |
 
 Em requisições Node HTTP, o adaptador também consulta `IncomingMessage.rawHeaders` para rejeitar cabeçalhos `Authorization`, `Cookie`, `Content-Length` e `Transfer-Encoding` duplicados, pois o Node pode normalizar ou descartar credenciais repetidas silenciosamente. Um teste HTTP loopback reproduz esse comportamento adversarial. A integração futura com outros servidores HTTP deve fornecer informação equivalente ou checar duplicações antes da normalização.
@@ -41,7 +41,7 @@ Para Node `IncomingMessage`, o adaptador HTTP só deve abortar `request.signal` 
 node --test scripts/tests/read-boundary*.test.mjs
 ```
 
-Há **75 testes Node locais aprovados** na mesma bateria: 41 cenários adversariais de fronteira, 5 cenários HTTP loopback, 9 testes de integração, 16 testes de prazo/cancelamento e 4 testes de fuzz determinístico com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
+Há **79 testes Node locais aprovados** na mesma bateria: 44 cenários adversariais de fronteira, 5 cenários HTTP loopback, 9 testes de integração, 17 testes de prazo/cancelamento e 4 testes de fuzz determinístico com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
 
 - `PortalPropertyQuery.ts`: `8bd4916731abc776f578c562e77ca54f165ed285`
 - `PortalGardenQuery.ts`: `ee186346b6a621619643e31949a876d2ee490720`
@@ -52,7 +52,7 @@ Há **75 testes Node locais aprovados** na mesma bateria: 41 cenários adversari
 
 ### Regressão cruzada com o PR-base
 
-Após a bateria nova de 75 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os oito arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **111/111 PASS, 0 FAIL** (TAP, ~1,63 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
+Após a bateria nova de 79 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os oito arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **115/115 PASS, 0 FAIL** (TAP, ~1,73 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
 
 Hashes das três suítes originais:
 - `combined.test.mjs`: `67390b0a5179c849a217712bf0e2ff74c8587937`
@@ -69,7 +69,7 @@ CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test \
   web/tests/contract.test.cjs
 ```
 
-Resultado TAP: **75 testes novos, 75 pass, 0 fail** (em execução conjunta com 36 herdados, total 111/111). As nove integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os cinco novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
+Resultado TAP: **79 testes novos, 79 pass, 0 fail** (em execução conjunta com 36 herdados, total 115/115). As nove integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os cinco novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
 ## Prova adversarial da própria suíte (mutação local, sem commit)
 
@@ -82,7 +82,11 @@ Em diretório temporário isolado, foram injetados **quatro defeitos intencionai
 | Aceitar `actorId` arbitrário enviado pelo browser | **3 testes reprovaram** |
 | Ignorar a seleção de seções e tentar ler todas | **11 testes reprovaram** |
 
-Após restauração do módulo original, a bateria então existente terminou novamente em **87/87 PASS**; o resultado atual ampliado é **111/111 PASS**. Os quatro mutantes foram testados **antes** da adição da proteção de prazos e desconexão. Isso demonstra sensibilidade dos testes a quatro regressões importantes; **não** é cobertura formal completa, fuzzing exaustivo, teste MariaDB ou garantia de segurança em produção.
+Após restauração do módulo original, a bateria então existente terminou novamente em **87/87 PASS**; o resultado atual ampliado é **115/115 PASS**. Os quatro mutantes foram testados **antes** da adição da proteção de prazos e desconexão. Isso demonstra sensibilidade dos testes a quatro regressões importantes; **não** é cobertura formal completa, fuzzing exaustivo, teste MariaDB ou garantia de segurança em produção.
+
+## Sintaxe de cookies e proteção contra sentinelas
+
+Agora o cabeçalho `Cookie` só é aceito como sequência de **pares nome=valor**; tokens opacos sem `=`, entradas sem nome, nomes com espaços/pontuação inválida e separadores vazios retornam 400 antes do verificador. Valores com padding `=`, nomes como `__Host-crownicles-session` e cookies adicionais distintos continuam aceitos. **Isso valida somente a sintaxe:** assinatura, revogação, binding de sessão e atributos Secure/HttpOnly/SameSite continuam obrigações do adaptador Keycloak real, não demonstradas pelos mocks.
 
 ## Codificações ambíguas e teste adversarial determinístico
 
@@ -99,13 +103,13 @@ A suíte `scripts/tests/read-boundary-fuzz.test.mjs` utiliza semente fixa `0xC04
 | Remover rejeição de cabeçalhos críticos duplicados | 4 |
 | Desativar propagação de desconexão externa | 1 |
 
-Em cada caso o módulo original foi **restaurado**. Todos os 111 testes passaram na suíte integrada após as restaurações.
+Em cada caso o módulo original foi **restaurado**. Todos os 115 testes passaram na suíte integrada após as restaurações.
 
 ## Matriz de aceite para a próxima integração
 
 | Gate | Estado em 22/11 | Evidência necessária para avançar |
 |---|---|---|
-| CP040-LAB — contratos de entrada/saída, isolamento via fixtures | **APROVADO LOCALMENTE 111/111** | Fontes versionadas e testes locais reproduzíveis; não é teste de banco real |
+| CP040-LAB — contratos de entrada/saída, isolamento via fixtures | **APROVADO LOCALMENTE 115/115** | Fontes versionadas e testes locais reproduzíveis; não é teste de banco real |
 | CP040-CI — runner executa as etapas `npm run check` | **BLOQUEADO** | Workflow com runner, steps, logs e exit code reais; issue #3 |
 | CP027-DB — MariaDB nativo e leitura SELECT-only | **BLOQUEADO 0/12** | 12/12 testes originais em ambiente descartável, transação repeatable-read e ownership verificados |
 | CP040-CORE — TypeScript integrado no checkout Core fixado | **PENDENTE** | Compilação/typecheck nativos, importação legítima, sem registro de comando ou mutação |
