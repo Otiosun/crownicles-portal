@@ -273,3 +273,10 @@ test('malformed Cookie syntax never reaches the verified session resolver',async
  }
  assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
 });
+test('valid session cookie names and values with padding are forwarded unchanged',async()=>{
+ const {handle,seen}=make();
+ const cookie='__Host-crownicles-session=eyJhbGciOiJub25lIn0==; prefs="dark"';
+ const r=await handle(req({headers:{cookie}}));
+ assert.equal(r.status,200);
+ assert.equal(seen.auth[0].cookie,cookie);
+});
