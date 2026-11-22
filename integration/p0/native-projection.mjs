@@ -22,7 +22,15 @@ function talismans(raw){const keys=['hasTalisman','hasCloneTalisman','hasRemoteH
  if(keys.every(k=>raw[k]===undefined))return {kind:'not_reported'};
  return {kind:'reported',...(raw.hasTalisman===undefined?{}:{expedition:bool(raw.hasTalisman)}),...(raw.hasCloneTalisman===undefined?{}:{clone:bool(raw.hasCloneTalisman)}),...(raw.hasRemoteHarvestTalisman===undefined?{}:{remoteHarvest:bool(raw.hasRemoteHarvestTalisman)})}}
 export function projectInventory(raw){raw=object(raw);if(raw.foundPlayer!==true)fail();let d=object(raw.data),slots=object(d.slots);let result={categories:categories.map(([key,plural,backup,category])=>{let capacity=positive(slots[plural]);let reserves=unique(array(d[backup]).map(row=>{row=object(row);let slot=positive(row.slot),display=item(row.display,category);if(slot>=capacity||display.id===0)fail();return{slot,display}}),'slot');return {category:key,capacity,active:item(d[key],category),reserves}}),materials:unique(array(d.materials).map(m=>{m=object(m);return {materialId:natural(m.materialId),quantity:positive(m.quantity)}}),'materialId'),talismans:talismans(raw)};
-if(d.plants!==undefined){let p=object(d.plants);result.plants={kind:'reported',...optional(p,'seed',positive),plantSlots:unique(array(p.plantSlots).map(s=>({plantId:positive(s.plantId),slot:natural(s.slot)})),'slot'),maxPlantSlots:natural(p.maxPlantSlots),linkedToHomeStorage:bool(p.linkedToHomeStorage)}}else result.plants={kind:'not_reported'};return result;}
+if(d.plants!==undefined){
+ let p=object(d.plants),maxPlantSlots=natural(p.maxPlantSlots);
+ let plantSlots=unique(array(p.plantSlots).map(s=>{
+  s=object(s);const slot=natural(s.slot);
+  if(slot>=maxPlantSlots)fail();
+  return {plantId:positive(s.plantId),slot};
+ }),'slot');
+ result.plants={kind:'reported',...optional(p,'seed',positive),plantSlots,maxPlantSlots,linkedToHomeStorage:bool(p.linkedToHomeStorage)};
+}else result.plants={kind:'not_reported'};return result;}
 function bar(v){v=object(v);return {value:finite(v.value),max:finite(v.max)}}
 // CP014: full native CommandProfilePacketRes.playerData contract. Explicit nested allowlists.
 function rankNumber(v){return v===-1?-1:positive(v)}
