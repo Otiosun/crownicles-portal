@@ -58,6 +58,14 @@ Foram montados **três mutantes temporários** do guard original corrigido, todo
 
 Os mutantes não foram enviados ao GitHub. Sem inferir cobertura completa de ataque ou prova formal de segurança.
 
+## Gate de convergência automático após incorporar CP042
+
+`integration/p0/interop-cp042.test.mjs` agora é chamado pelo `npm run test:p0` oficial. Ele só importa `native-projection.mjs` se o módulo estiver presente no mesmo checkout. **Enquanto este PR permanecer isolado**, a suíte reporta **89 PASS + 1 SKIP explícito** (não declara a projeção CP042 testada). Se `CP042_REQUIRED=1`, a ausência do módulo produz **1 FAIL** para bloquear a integração quando esse componente se tornar obrigatório.
+
+**Com PR #11 CP042 presente:** o teste deixa de pular e executa cinco casos de DTO real (talismã opcional, reserva fora da capacidade, plantas fora da capacidade, semente independente, descarte de dados privados). `npm run test:p0`: **94/94 PASS, zero SKIP**. A bateria agregada com CP042/CP014 e provas externas: **154/154 PASS**, repetida após extração limpa. Assim, não é possível alegar que o gate de integração foi coberto numa branch sem a fonte exigida; e quando o código estiver junto, passa a integrar `npm run check` automaticamente.
+
+O [pacote final no Drive](https://drive.google.com/file/d/1x-SbSQMtld3z6FFflrW4a124BR_fgrU7/view) contém 37 arquivos verificados por SHA-256, inclusive as três falhas de mutação e a execução E2E. ZIP: **90.775 bytes**, SHA-256 `071e53aaf65f59f49dcd88871d4408e365b6718e6381ea6d5ec9338652f89f52`. Uso restrito a laboratório offline.
+
 ## Dependências e decisão de integração
 
 Este PR é criado **sobre a branch do PR #10**, sem modificar a branch do outro trabalhador. Não pode ser mesclado automaticamente em `main`. Ao incorporar CP042 posteriormente, exigir teste diferencial servidor→DTO→guard→máquina UX com autenticação de sessão e versionamento do contrato. A prova de compatibilidade **não** é API pronta nem prova de segurança de dados reais.
