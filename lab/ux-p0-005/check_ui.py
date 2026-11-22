@@ -38,6 +38,7 @@ with sync_playwright() as playwright:
             page.get_by_role('button',name='Voltar ao mesmo item').click()
             assert page.locator(f'#item-weapon-{slot}').get_attribute('aria-pressed')=='true'
             page.wait_for_function(f"document.activeElement.id === 'item-weapon-{slot}'")
+        page.locator('#scenarioTools summary').click()
         page.locator('#scenario').select_option('restricted')
         page.get_by_role('button',name='Aplicar estado').click()
         assert page.get_by_text('Esta informação não está disponível para consulta agora.').is_visible()
