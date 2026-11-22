@@ -17,7 +17,7 @@ Na raiz do repositório, execute um servidor estático local (por exemplo, `pyth
 - Categorias nativas arma, armadura, poção, objeto. Botão de slot ativo e reservas individualizadas por `{category,slot,id}`; dois itens distintos de ID 7 em reservas 1/2; ID 0 no ativo.
 - Inspeção somente leitura, atributos existentes e fallback editorial sem ícone/arte/nome assumidos.
 - Retorno que tenta restaurar foco do item e posição de rolagem, usando DOM real.
-- Cenários sintéticos de `ready`, `loading`, `restricted`, `not_initialized`, `unavailable` e sinal 401 (`unauthorized`), exercitando a máquina; sem esconder dados sensíveis por CSS como substituto de limpar o estado.
+- Ferramentas de teste recolhidas por padrão (especialmente no celular), com cenários sintéticos de `ready`, `loading`, `restricted`, `not_initialized`, `unavailable` e sinal 401 (`unauthorized`), exercitando a máquina; sem esconder dados sensíveis por CSS como substituto de limpar o estado.
 - Layout neutro de responsividade, indicador de foco e áreas de clique com altura mínima de 44 px. **Não é direção artística**.
 
 ## Evidência desta rodada
