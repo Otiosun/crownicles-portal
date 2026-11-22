@@ -6,8 +6,9 @@
   "scripts": {
     "test:web": "node --test web/tests/interaction.test.cjs web/tests/contract.test.cjs",
     "test:integration": "node --test integration/tests/combined.test.mjs integration/tests/native-projection.test.mjs",
+    "test:p0": "node --test integration/p0/response-bridge.test.mjs integration/p0/projection-guard.test.mjs",
     "test:tools": "node --test scripts/tests/*.test.mjs",
-    "test": "npm run test:web && npm run test:integration && npm run test:tools",
+    "test": "npm run test:web && npm run test:integration && npm run test:tools && npm run test:p0",
     "audit:imports": "node scripts/native-import-audit.mjs",
     "gate:preflight": "node scripts/gate-preflight.mjs",
     "check": "node --check web/app.js && node --check web/contract-adapter.js && npm run audit:imports && npm test"
