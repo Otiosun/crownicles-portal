@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { once } from 'node:events';
 import { initialState, transition, canInspect } from '../../lab/ux-p0-003/machine.mjs';
 import { startRead, finishRead } from './response-bridge.mjs';
 
@@ -24,7 +25,7 @@ const fixturePath = resolve(root, 'fixture.mjs');
 if (createHash('sha256').update(await readFile(fixturePath)).digest('hex') !== CP014_FIXTURE_SHA256) {
   throw new Error('CP014 fixture provenance mismatch: refusing unverified fixture');
 }
-const {readOwn,projectProfile,projectInventory} = await import(pathToFileURL(projectorPath).href);
+const {readOwn,projectProfile,projectInventory,createLabServer} = await import(pathToFileURL(projectorPath).href);
 const {harness,makeFixture,now} = await import(pathToFileURL(fixturePath).href);
 const auth = () => transition(initialState(),{type:'AUTH_ESTABLISHED'});
 const reader = async (h,section,actorId='fixture-A') => await readOwn({section,session:{actorId,expiresAt:now+60000},repo:h.repo,now});
@@ -135,4 +136,74 @@ test('CP041-native-18 old request response cannot overwrite more recent original
  assert.equal(s.sections.profile.state,'loading');
  s=finishRead(s,latest.token,await reader(h,'profile','fixture-A'));
  assert.equal(s.sections.profile.data.money,2450);
+});
+
+/** Real loopback HTTP, still synthetic auth + ORM; DOES NOT test HTTPS/Keycloak. */
+async function loopback(t, harnessOptions){
+ const h=harness(harnessOptions);const server=createLabServer({verifySession:h.verifySession,repo:h.repo,clock:()=>now});
+ server.listen(0,'127.0.0.1');await once(server,'listening');
+ t.after(async()=>{server.closeAllConnections();await new Promise(resolve=>server.close(resolve))});
+ const base=`http://127.0.0.1:${server.address().port}`;
+ const call=async(section,token='lab-A',opts={})=>{
+  const resp=await fetch(base+`/v1/me/${section}`,{method:opts.method||'GET',
+   headers:{authorization:`Bearer ${token}`}});
+  return {status:resp.status,body:await resp.json(),headers:resp.headers};
+ };
+ return {h,call};
+}
+test('CP041-native-19 real HTTP loopback profile to P0 profile view',async t=>{
+ const {call}=await loopback(t);let s=auth();const response=await call('profile');
+ assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'private, no-store');
+ s=apply(s,'profile',1,response);
+ assert.equal(s.sections.profile.state,'ready');assert.equal(s.sections.profile.data.health.value,80);
+ assert.equal(JSON.stringify(s).includes('secret-identity-A'),false);
+});
+test('CP041-native-20 real HTTP loopback inventory-to-inspection-to-return',async t=>{
+ const {call}=await loopback(t);let s=apply(auth(),'inventory',1,await call('inventory'));
+ s=transition(s,{type:'GO_INVENTORY'});s=transition(s,{type:'SELECT_ITEM',category:'weapon',slot:1});
+ assert.deepEqual(s.selected,{category:'weapon',slot:1,id:7});
+ s=transition(s,{type:'OPEN_DETAIL'});assert.equal(s.view,'detail');
+ s=transition(s,{type:'BACK'});assert.equal(s.focusIntent,'item:weapon:1');
+});
+test('CP041-native-21 real HTTP expired token triggers profile and inventory purge',async t=>{
+ const {call}=await loopback(t);let s=auth();
+ s=apply(s,'profile',1,await call('profile'));
+ s=apply(s,'inventory',1,await call('inventory'));
+ s=apply(s,'profile',2,await call('profile','lab-expired'));
+ assert.equal(s.authorized,false);assert.equal(s.sections.profile.data,null);
+ assert.equal(s.sections.inventory.data,null);
+});
+test('CP041-native-22 40 simultaneous loopback queries for two synthetic actors stay isolated',async t=>{
+ const {call}=await loopback(t);const tokens=Array.from({length:40},(_,i)=>i%2?'lab-B':'lab-A');
+ const results=await Promise.all(tokens.map((token,i)=>call(i%4<2?'profile':'inventory',token)));
+ for(let i=0;i<40;i++){
+  const response=results[i];assert.equal(response.status,200);
+  const actorB=tokens[i]==='lab-B';
+  if(i%4<2)assert.equal(response.body.data.money,actorB?777:2450);
+  else assert.equal(response.body.data.categories[0].active.id,actorB?7:10);
+  assert.ok(!JSON.stringify(response.body).includes('secret-identity'));
+ }
+});
+test('CP041-native-23 HTTP forbidden inventory namespace cannot impersonate chest',async t=>{
+ const {call}=await loopback(t);const r=await call('chest');
+ assert.equal(r.status,404);assert.equal(JSON.stringify(r.body).includes('categories'),false);
+});
+test('CP041-native-24 late HTTP response from prior epoch does not survive subject replacement',async t=>{
+ const {call}=await loopback(t);let s=auth(),old=startRead(s,'profile',1);
+ s=transition(old.state,{type:'AUTH_ESTABLISHED'});const current=startRead(s,'profile',1);
+ const responseA=await call('profile','lab-A');
+ s=finishRead(current.state,old.token,responseA);assert.equal(s.sections.profile.state,'loading');
+ s=finishRead(s,current.token,await call('profile','lab-B'));
+ assert.equal(s.sections.profile.data.money,777);
+});
+test('CP041-native-25 100 reordered requests cannot overwrite the last issued request',async()=>{
+ const h=harness();let s=auth(),tokens=[];
+ for(let id=1;id<=100;id++){
+  const b=startRead(s,'inventory',id);s=b.state;tokens.push(b.token);
+ }
+ const staleA=await reader(h,'inventory','fixture-A');
+ for(let i=98;i>=0;i--)s=finishRead(s,tokens[i],staleA);
+ assert.equal(s.sections.inventory.state,'loading');
+ s=finishRead(s,tokens[99],await reader(h,'inventory','fixture-B'));
+ assert.equal(s.sections.inventory.data.categories[0].active.id,7);
 });
