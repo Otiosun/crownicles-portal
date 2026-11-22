@@ -11,7 +11,7 @@
 - Core `InventoryCommand.ts`: Git blob `0b17bd02092ec1b22ee32325db42199f6229e346`.
 - Pacote CP012 original preservado no Drive, SHA256 `edeff51402b55638818971b4dea75ad894120633d224b9e3c1315958ba11eb1b`.
 - Pacote CP014 original preservado no Drive, SHA256 `f74efef74fb65672a20d7f4d6d12378fd1bbaa4729ce7581e458c58bf0125e43`.
-- O ensaio cruzado importa **os arquivos originais não modificados** do CP014, checando SHA256 `987e61c2974eaeeeb510468e2e6fbd877cfb40959807741dec88655f5e74718f` (`gateway/projection.mjs`) e `d5edb262a6ef460294e996f27c8f37d55a6cb200256f7ed3d9b49b38d588bae2` (`gateway/fixture.mjs`). Essas fontes NÃO são vendorizadas neste PR.
+- Os ensaios cruzados importam **arquivos originais não modificados**, conferindo CP012 `gateway/projection.mjs` SHA256 `6fc3a7212337cee57c78960f1507fe2ed9ee74b685115a99f2c2bc80257fabce`, CP014 `gateway/projection.mjs` SHA256 `987e61c2974eaeeeb510468e2e6fbd877cfb40959807741dec88655f5e74718f` e `gateway/fixture.mjs` SHA256 `d5edb262a6ef460294e996f27c8f37d55a6cb200256f7ed3d9b49b38d588bae2`. Essas fontes NÃO são vendorizadas neste PR.
 
 ## Contrato de integração, não substituição
 
@@ -32,9 +32,12 @@ node --test integration/p0/response-bridge.test.mjs integration/p0/projection-gu
 # Extrair o CP014 original a partir do ZIP privado, SEM editar os arquivos.
 # Teste cruzado exige fonte exata; não faz fallback para cópia artificial:
 CP014_GATEWAY_DIR=/caminho/CP014/gateway node --test integration/p0/compat-cp014.test.mjs
+
+# Diferencial CP012 v. CP014: obrigatório usar os DOIS arquivos originais pinados
+CP012_GATEWAY_DIR=/caminho/CP012/gateway CP014_GATEWAY_DIR=/caminho/CP014/gateway node --test integration/p0/compat-cp012-014.test.mjs
 ```
 
-**Evidência da rodada de 22/11/2026:** 23/23 testes independentes da ponte, 53/53 testes do verificador estrito (incluindo 1.600 mutações determinísticas), 18/18 testes cruzados CP014 original + máquina UX e 83/83 testes do gateway CP014 reexecutados separadamente. São **94 novos testes CP041** e **83 históricos reexecutados**, não 177 testes inéditos. Não há prova de browser HTTP real, autorização do Core/MariaDB, OIDC/Keycloak, revogação produtiva ou CI; a UX/arte permanece em avaliação.
+**Evidência da rodada de 22/11/2026:** 23/23 testes independentes da ponte, 53/53 testes do verificador estrito (incluindo 1.600 mutações determinísticas), 25/25 testes cruzados CP014 original + máquina UX (incluindo HTTP loopback e 40 consultas simultâneas A/B) e 12/12 testes diferenciais CP012↔CP014 (incluindo 2.000 mutações determinísticas). São **113 novos testes CP041**. Baterias históricas reexecutadas à parte, sem somar como novos: CP014 gateway 83/83, CP014 candidatos 44/44, CP012 gateway 33/33 e CP012 candidatos 38/38. Esses conjuntos têm dependências/fixtures em comum e não são provas independentes de banco real. Não há prova de browser HTTP real, autorização do Core/MariaDB, OIDC/Keycloak, revogação produtiva ou CI; a UX/arte permanece em avaliação.
 
 ## Bloqueios e propriedade da mudança
 
