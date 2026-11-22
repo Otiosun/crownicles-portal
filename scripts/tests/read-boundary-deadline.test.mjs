@@ -141,3 +141,27 @@ test('an external signal stays reusable and does not become aborted on successfu
  assert.equal(r.status,200);
  assert.equal(controller.signal.aborted,false);
 });
+test('external AbortSignal listeners are cleaned up after success, auth failure and read failure',async()=>{
+ const {getEventListeners}=await import('node:events');
+ const controller=new AbortController();
+ const scenarios=[
+  {...defaults},
+  {...defaults,resolveVerifiedSubject:async()=>null},
+  {...defaults,readSnapshot:async()=>{throw Error('private sql');}}
+ ];
+ for(const scenario of scenarios){
+  const handler=createPortalReadBoundary(scenario);
+  await handler({...req,signal:controller.signal});
+  assert.equal(getEventListeners(controller.signal,'abort').length,0);
+ }
+});
+test('disconnect after verification but before reading cannot start a new snapshot',async()=>{
+ const controller=new AbortController();let reads=0;
+ const handler=createPortalReadBoundary({
+  resolveVerifiedSubject:async()=>{controller.abort();return A;},
+  readSnapshot:async()=>{reads++;return success();}
+ });
+ const r=await handler({...req,signal:controller.signal});
+ assert.equal(r.status,503);
+ assert.equal(reads,0);
+});
