@@ -124,3 +124,20 @@ test('all three reported talisman flags retain each boolean independently',()=>{
  const source=inventory();source.hasTalisman=false;source.hasCloneTalisman=true;source.hasRemoteHarvestTalisman=false;
  assert.deepEqual(projectInventory(source).talismans,{kind:'reported',expedition:false,clone:true,remoteHarvest:false});
 });
+test('every category enforces its own reserve bound, not the weapon capacity',()=>{
+ for(const [plural,backup,category] of [['armors','backupArmors',1],['potions','backupPotions',2],['objects','backupObjects',3]]){
+  const source=inventory();source.data.slots[plural]=3;
+  source.data[backup]=[{slot:2,display:category<2?main(6,category):support(6,category)}];
+  assert.equal(normalizeNativeP0Read('inventory',{state:'ready',packet:source}).state,'ready',plural);
+  source.data[backup][0].slot=3;
+  assert.equal(normalizeNativeP0Read('inventory',{state:'ready',packet:source}).state,'unavailable',plural);
+ }
+});
+test('a single clone talisman flag is still reported without inventing expedition',()=>{
+ const source=inventory();source.hasCloneTalisman=false;
+ assert.deepEqual(projectInventory(source).talismans,{kind:'reported',clone:false});
+});
+test('malformed independently present talisman values do not get coerced',()=>{
+ const source=inventory();source.hasTalisman=0;
+ assert.deepEqual(normalizeNativeP0Read('inventory',{state:'ready',packet:source}),{state:'unavailable'});
+});
