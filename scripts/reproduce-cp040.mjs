@@ -22,7 +22,7 @@ const cp040Tests=[
  'integration/tests/combined.test.mjs','integration/tests/native-projection.test.mjs',
  'scripts/tests/read-boundary.test.mjs','scripts/tests/read-boundary-http.test.mjs',
  'scripts/tests/read-boundary-integration.test.mjs','scripts/tests/read-boundary-deadline.test.mjs',
- 'scripts/tests/read-boundary-fuzz.test.mjs','web/tests/contract.test.cjs'
+ 'scripts/tests/read-boundary-fuzz.test.mjs','scripts/tests/read-boundary-session-race.test.mjs','web/tests/contract.test.cjs'
 ];
 function blobSha(bytes){
  return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
@@ -52,6 +52,6 @@ function run(){
   stdio:'inherit',timeout:60000
  });
  if(child.error||child.status!==0)throw Error('CP040_TESTS_FAILED');
- console.log('CP040_LOCAL_LAB=PASS (not a DB/OIDC/CI gate)');
+ console.log('CP041_SESSION_REVALIDATION=PASS (not a DB/OIDC/CI gate)');
 }
-try {run();} catch(e){console.error('CP040_LOCAL_LAB=BLOCKED',e.message);process.exitCode=1;}
+try {run();} catch(e){console.error('CP041_SESSION_REVALIDATION=BLOCKED',e.message);process.exitCode=1;}
