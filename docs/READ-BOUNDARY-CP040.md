@@ -63,6 +63,20 @@ CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test \
 
 Resultado TAP: **51 testes novos, 51 pass, 0 fail** (em execução conjunta com 36 herdados, total 87/87). As oito integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os três novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
+## Matriz de aceite para a próxima integração
+
+| Gate | Estado em 22/11 | Evidência necessária para avançar |
+|---|---|---|
+| CP040-LAB — contratos de entrada/saída, isolamento via fixtures | **APROVADO LOCALMENTE 87/87** | Fontes versionadas e testes locais reproduzíveis; não é teste de banco real |
+| CP040-CI — runner executa as etapas `npm run check` | **BLOQUEADO** | Workflow com runner, steps, logs e exit code reais; issue #3 |
+| CP027-DB — MariaDB nativo e leitura SELECT-only | **BLOQUEADO 0/12** | 12/12 testes originais em ambiente descartável, transação repeatable-read e ownership verificados |
+| CP040-CORE — TypeScript integrado no checkout Core fixado | **PENDENTE** | Compilação/typecheck nativos, importação legítima, sem registro de comando ou mutação |
+| CP040-AUTH — sessão OIDC/Keycloak real | **PENDENTE** | Assinatura, emissor, audiência, expiração, revogação, cookies e troca de identidade testados no servidor |
+| CP040-HTTP — transporte HTTPS e abuso operacional | **PENDENTE** | Duplicação de headers também no adaptador real, rate/byte/time budgets, cross-owner end-to-end e logs sanitizados |
+| CP040-RELEASE — revisão técnica e visual | **NÃO AUTORIZADO** | Regressão completa, aprovação de segurança e aceite artístico separados; nunca inferidos dos mocks |
+
+**Sequência recomendada:** resolver infraestrutura de CI e CP027 em paralelo; depois validar a integração Core/Keycloak/HTTPS em ambiente isolado; somente ao final considerar revisão para merge. Não criar novas telas para contornar esses gates nem conectar esta candidata a jogadores reais.
+
 ## Barreiras não dispensadas
 
 1. **CP027: 0/12 MariaDB nativo** — executar em ambiente descartável com isolamento entre dois sujeitos, SELECT-only e transação real, além do typecheck nativo do Core.
