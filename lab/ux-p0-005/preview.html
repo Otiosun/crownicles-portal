@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crownicles — UX-P0-005 · fluxo de consulta</title>
+<style>
+:root{color-scheme:light;font:16px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;color:#212121;background:#f6f6f5}
+*{box-sizing:border-box}body{margin:0}button,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.48}
+:focus-visible{outline:3px solid #1859a8;outline-offset:3px}.skip{position:absolute;top:-80px;left:12px;background:white;padding:10px}.skip:focus{top:5px}
+header{border-bottom:1px solid #ccc;background:white}.frame{width:min(1050px,100% - 32px);margin:auto}.head{min-height:78px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;padding:12px 0}.wordmark{font-weight:750;letter-spacing:.045em}.muted{color:#626262;font-size:.88rem}.tag{border:1px solid #777;padding:3px 7px;font-size:.78rem}
+.layout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;padding:24px 0 35px}.rail,.screen,.lab{border:1px solid #c6c6c6;background:#fff}.rail{padding:16px;align-self:start;position:sticky;top:12px}.rail nav{display:grid;gap:8px}.rail nav button{width:100%;text-align:left}.rail h2,.lab h2{font-size:1rem;margin:0 0 12px}.lab{padding:16px;margin-top:16px}.lab label{display:block;font-size:.87rem;margin:0 0 5px}.lab select{width:100%;min-width:0;margin-bottom:8px;padding:8px}.lab p{font-size:.8rem}.lab button{width:100%;margin:5px 0;text-align:left}.lab button:last-of-type{border-color:#8b2525;color:#8b2525}
+.screen{min-height:400px;padding:clamp(16px,4vw,32px)}.screen h1{font-size:clamp(1.7rem,4vw,2.3rem);line-height:1.2;margin:0 0 12px}.screen h1:focus{outline:0}.eyebrow{text-transform:uppercase;letter-spacing:.09em;font-size:.8rem;color:#555;margin:0 0 9px}.lede{max-width:52ch;color:#595959}.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:26px 0}.metric{border:1px solid #d0d0d0;padding:15px;min-width:0}.metric span{display:block;color:#555;font-size:.85rem}.metric strong{font-size:1.6rem}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}button{min-height:44px;padding:8px 13px;border:1px solid #757575;border-radius:3px;background:white;color:#222}.primary{background:#222;color:white;border-color:#222}.selected{border:2px solid #1859a8;background:#f0f6ff}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}.tabs button[aria-pressed=true]{background:#222;color:#fff;border-color:#222}.item-list{display:grid;gap:9px;margin-top:16px}.item{width:100%;text-align:left;display:flex;align-items:center;gap:14px;justify-content:space-between;min-height:69px}.item .slot{font-weight:600}.item .itemid{font-size:.84rem;color:#555}.item.selected .itemid{color:#1859a8}.selection{margin-top:18px;padding:14px;border:1px solid #aaa}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;margin-top:24px}.fact{border-bottom:1px solid #ddd;padding:13px 0}.fact dt{color:#555}.fact dd{margin:0;font-weight:650}.message{padding:20px;background:#f6f6f5;border-left:4px solid #555;margin-top:20px}.message p{margin-bottom:0}.status{border-top:1px solid #ddd;padding:11px 0 28px;font-size:.86rem;color:#515151}.visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media(max-width:700px){.layout{display:block;padding-top:14px}.rail{position:static;margin-bottom:14px}.rail nav{display:flex}.rail nav button{flex:1;min-width:0;text-align:center}.lab{margin-top:10px}.lab select,.lab button{max-width:none}.metrics,.facts{grid-template-columns:1fr}.head{min-height:65px}.tag{font-size:.73rem}.screen{min-height:350px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<a href="#content" class="skip">Ir ao conteúdo</a>
+<header><div class="frame head"><span class="wordmark">CROWNICLES <span class="muted">/ UX-P0-005</span></span><span class="tag">Laboratório isolado · dados fictícios</span></div></header>
+<div class="frame layout">
+  <aside class="rail" aria-label="Navegação e cenários de teste">
+    <h2>Áreas</h2><nav id="navigation" aria-label="Navegação principal"></nav>
+    <section class="lab" id="lab" aria-label="Cenários sintéticos">
+      <h2>Simular estado</h2>
+      <label for="scenario">Estado da seção atual</label>
+      <select id="scenario">
+        <option value="ready">Pronto (dados fictícios)</option><option value="loading">Carregando</option>
+        <option value="restricted">Acesso restrito</option><option value="not_initialized">Não inicializado</option>
+        <option value="unavailable">Indisponível</option><option value="unauthorized">Sessão expirada (401)</option>
+      </select>
+      <button id="applyScenario">Aplicar estado</button>
+      <button id="endSession">Encerrar sessão fictícia</button>
+      <p>Não utiliza login, rede, bancos de dados ou dados reais do jogo. A experiência artística ainda não foi definida.</p>
+    </section>
+  </aside>
+  <main id="content" class="screen" aria-live="off"></main>
+</div>
+<div class="frame status" id="status" role="status" aria-live="polite">Nenhum serviço do jogo está conectado.</div>
+<script type="module">
+import {initialState,transition,itemAt,canInspect,P0_CATEGORIES} from '../ux-p0-003/machine.mjs';
+const names={weapon:'Armas',armor:'Armaduras',potion:'Poções',object:'Objetos'};
+const makeItem=(id,category,extra={})=>({id,itemCategory:category,rarity:0,...extra});
+const synthetic={
+ profile:{level:2,health:{value:10,max:12},experience:{value:1,max:10},money:0},
+ inventory:{categories:P0_CATEGORIES.map((category,index)=>({category,capacity:3,
+  active:makeItem(index===0?0:index,category,index===0?{attack:{baseValue:0,upgradeValue:0}}:{}),
+  reserves:index===0?[{slot:1,display:makeItem(7,category,{attack:{baseValue:4,upgradeValue:1}})},{slot:2,display:makeItem(7,category,{attack:{baseValue:4,upgradeValue:0}})}]:[] })),
+  materials:[],talismans:{kind:'not_reported'},plants:{kind:'not_reported'}}
+};
+let state=initialState(),sequence=0,returnScrollY=0,announcement='',lastReply=null;
+const content=document.getElementById('content'),navigation=document.getElementById('navigation'),status=document.getElementById('status');
+const esc=value=>String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const focusAfter=(target,scroll)=>requestAnimationFrame(()=>{const el=document.getElementById(target);if(el){el.focus({preventScroll:scroll!==undefined});if(scroll!==undefined)window.scrollTo({top:scroll,behavior:'instant'});}});
+function emit(event){const before=state;state=transition(state,event);render();return before!==state;}
+function query(section,kind){
+ const epoch=state.epoch,requestId=++sequence;
+ state=transition(state,{type:'FETCH_STARTED',section,epoch,requestId});
+ if(kind!=='loading'){
+  const response={type:'FETCH_FINISHED',section,epoch,requestId,domainState:kind,
+   data:kind==='ready'?synthetic[section]:null,asOf:'2026-11-22T00:00:00Z'};
+  lastReply=response;state=transition(state,response);
+ }
+ render();
+}
+function start(){state=transition(state,{type:'AUTH_ESTABLISHED'});query('profile','ready');query('inventory','ready');announce('Sessão de demonstração iniciada.');focusAfter('profile-heading');}
+function announce(message){announcement=message;status.textContent=message+' Nenhum serviço do jogo está conectado.';}
+function metric(label,value){return `<div class="metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;}
+function viewMessage(kind,section){const title={idle:'Ainda não consultado',loading:'Consulta em andamento',restricted:'Consulta restrita',not_initialized:'Informação não preparada',unavailable:'Consulta indisponível'}[kind]||'Sem dados';
+ const text={idle:'Nenhuma consulta foi iniciada.',loading:`Consultando ${section==='profile'?'seu personagem':'pertences'}…`,restricted:'Esta informação não está disponível para consulta agora.',not_initialized:'Esta parte da conta ainda não está preparada para consulta.',unavailable:'Não foi possível apresentar estes dados neste momento.'}[kind]||'';
+ return `<div class="message" role="status"><strong>${esc(title)}</strong><p>${esc(text)}</p></div>${kind==='unavailable'?'<button class="primary" data-action="retry">Tentar novamente</button>':''}`;
+}
+function profilePage(){const q=state.sections.profile;const h=`<p class="eyebrow">Consulta / 01</p><h1 id="profile-heading" tabindex="-1">Seu personagem</h1><p class="lede">Resumo de leitura. Sem ações que alteram o jogo.</p>`;
+ if(q.state!=='ready')return h+viewMessage(q.state,'profile');
+ const p=q.data;let ms=[metric('Nível',p.level)];
+ if(p.health&&p.health.value!==undefined&&p.health.max!==undefined)ms.push(metric('Vida',`${p.health.value} / ${p.health.max}`));
+ if(p.experience&&p.experience.value!==undefined&&p.experience.max!==undefined)ms.push(metric('Experiência',`${p.experience.value} / ${p.experience.max}`));
+ if(p.money!==undefined)ms.push(metric('Dinheiro',p.money));
+ return h+`<div class="metrics">${ms.join('')}</div><p class="muted">Nome público e classe traduzida dependem de integração autorizada. Não exibidos nesta demonstração.</p><div class="actions"><button class="primary" data-action="inventory">Ver pertences</button></div>`;
+}
+function itemLabel(category,slot){return slot===0?'Equipamento ativo':`Reserva ${slot}`;}
+function inventoryPage(){const q=state.sections.inventory;let h=`<p class="eyebrow">Consulta / 02</p><h1 id="inventory-heading" tabindex="-1">Pertences</h1><p class="lede">Escolha uma categoria e uma posição. Cada posição mantém sua própria identidade, mesmo quando o ID do item se repete.</p>`;
+ if(q.state!=='ready')return h+viewMessage(q.state,'inventory')+`<div class="actions"><button data-action="back">Voltar ao personagem</button></div>`;
+ const selected=state.selected;const categories=q.data.categories;const group=categories.find(c=>c.category===state.category);
+ h+=`<div class="tabs" aria-label="Categorias dos pertences">${P0_CATEGORIES.map(c=>`<button id="category-${c}" data-action="category" data-category="${c}" aria-pressed="${c===state.category}">${esc(names[c])}</button>`).join('')}</div>`;
+ const rows=[{slot:0,display:group.active},...group.reserves].filter(x=>itemAt(q.data,state.category,x.slot));
+ h+=`<p class="muted">${esc(names[state.category])} · capacidade de reserva: ${esc(group.capacity)} (não é quantidade de itens)</p><div class="item-list" aria-label="Posições do acervo">`;
+ for(const row of rows){const item=row.display;const isSelected=selected&&selected.category===state.category&&selected.slot===row.slot&&selected.id===item.id;
+  h+=`<button class="item ${isSelected?'selected':''}" id="item-${state.category}-${row.slot}" data-action="select" data-category="${state.category}" data-slot="${row.slot}" aria-pressed="${!!isSelected}"><span><span class="slot">${esc(itemLabel(state.category,row.slot))}</span><br><span class="itemid">ID ${esc(item.id)} · sem ilustração atribuída</span></span><span aria-hidden="true">${isSelected?'●':'○'}</span></button>`;
+ }
+ h+='</div>';
+ if(selected)h+=`<div class="selection"><strong>Selecionado:</strong> ${esc(names[selected.category])}, ${esc(itemLabel(selected.category,selected.slot))}, ID ${esc(selected.id)}.<div class="actions"><button class="primary" data-action="inspect" ${canInspect(state)?'':'disabled'}>Inspecionar item</button></div></div>`;
+ h+='<div class="actions"><button data-action="back">Voltar ao personagem</button></div>';
+ return h;
+}
+function detailPage(){const selected=state.selected;const q=state.sections.inventory;
+ if(!selected||q.state!=='ready')return inventoryPage();
+ const group=q.data.categories.find(c=>c.category===selected.category);
+ const record=selected.slot===0?group.active:group.reserves.find(r=>r.slot===selected.slot)?.display;
+ const facts=[['Categoria',names[selected.category]],['Posição',itemLabel(selected.category,selected.slot)],['ID de catálogo',record?.id]];
+ for(const key of ['attack','defense','speed']){const d=record?.[key];if(!d)continue;
+  if(d.baseValue!==undefined)facts.push([`${key} · valor base`,d.baseValue]);
+  if(d.upgradeValue!==undefined)facts.push([`${key} · melhoria`,d.upgradeValue]);
+ }
+ return `<p class="eyebrow">Consulta / 02 / Inspeção</p><h1 id="detail-heading" tabindex="-1">Inspecionar item</h1><p class="lede">Ficha de leitura da posição selecionada. Nenhuma ação modifica o jogo.</p><dl class="facts">${facts.map(([a,b])=>`<div class="fact"><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl><div class="message"><strong>Representação indisponível</strong><p>Nomes e ilustrações dependem de catálogos e licenças verificados.</p></div><div class="actions"><button class="primary" data-action="back">Voltar ao mesmo item</button></div>`;
+}
+function render(){
+ navigation.innerHTML=state.authorized?`<button data-action="profile" ${state.view==='profile'?'aria-current="page"':''}>Personagem</button><button data-action="inventory" ${state.view!=='profile'?'aria-current="page"':''}>Pertences</button>`:'<p class="muted">Sessão fictícia não iniciada</p>';
+ document.getElementById('lab').hidden=!state.authorized;
+ if(!state.authorized){content.innerHTML=`<p class="eyebrow">Laboratório isolado</p><h1 id="login-heading" tabindex="-1">Experiência de consulta</h1><p class="lede">Fluxo testável com dados inteiramente fictícios. Não é um login real nem a interface definitiva do Crownicles.</p><div class="actions"><button class="primary" data-action="start">Iniciar sessão fictícia</button></div>`;return;}
+ content.innerHTML=state.view==='detail'?detailPage():state.view==='inventory'?inventoryPage():profilePage();
+}
+function handleAction(button){const act=button.dataset.action;
+ if(act==='start'){start();return;}
+ if(act==='profile'||act==='inventory'){emit({type:act==='profile'?'GO_PROFILE':'GO_INVENTORY'});focusAfter(act==='profile'?'profile-heading':'inventory-heading');return;}
+ if(act==='category'){emit({type:'SET_CATEGORY',category:button.dataset.category});focusAfter(`category-${button.dataset.category}`);return;}
+ if(act==='select'){emit({type:'SELECT_ITEM',category:button.dataset.category,slot:Number(button.dataset.slot)});focusAfter(`item-${button.dataset.category}-${button.dataset.slot}`);return;}
+ if(act==='inspect'){returnScrollY=window.scrollY;emit({type:'OPEN_DETAIL'});focusAfter('detail-heading');return;}
+ if(act==='back'){const was=state.view;emit({type:'BACK'});if(was==='detail'&&state.view==='inventory'&&state.selected)focusAfter(`item-${state.selected.category}-${state.selected.slot}`,returnScrollY);else focusAfter(state.view==='profile'?'profile-heading':'inventory-heading');return;}
+ if(act==='retry'){query(state.view==='profile'?'profile':'inventory','ready');focusAfter(state.view==='profile'?'profile-heading':'inventory-heading');}
+}
+document.addEventListener('click',event=>{const b=event.target.closest('button[data-action]');if(b)handleAction(b);});
+document.getElementById('applyScenario').addEventListener('click',()=>{
+ const kind=document.getElementById('scenario').value;const section=state.view==='profile'?'profile':'inventory';query(section,kind);
+ if(kind==='unauthorized'){announce('Sua sessão terminou. Entre novamente.');focusAfter('login-heading');}
+ else{announce(`Estado sintético aplicado: ${kind}.`);focusAfter(state.view==='detail'?'detail-heading':section==='profile'?'profile-heading':'inventory-heading');}
+});
+document.getElementById('endSession').addEventListener('click',()=>{emit({type:'LOGOUT'});announce('Sessão de demonstração encerrada.');focusAfter('login-heading');});
+render();
+</script>
+</body></html>
