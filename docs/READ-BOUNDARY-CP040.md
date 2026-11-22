@@ -31,7 +31,7 @@ O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, re
 node --test scripts/tests/read-boundary.test.mjs
 ```
 
-Há **44 testes Node locais aprovados** na mesma bateria: 36 cenários adversariais de fronteira, 3 cenários HTTP loopback, e 5 testes de integração com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
+Há **47 testes Node locais aprovados** na mesma bateria: 36 cenários adversariais de fronteira, 3 cenários HTTP loopback, e 8 testes de integração com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
 
 - `PortalPropertyQuery.ts`: `8bd4916731abc776f578c562e77ca54f165ed285`
 - `PortalGardenQuery.ts`: `ee186346b6a621619643e31949a876d2ee490720`
@@ -42,7 +42,7 @@ Há **44 testes Node locais aprovados** na mesma bateria: 36 cenários adversari
 
 ### Regressão cruzada com o PR-base
 
-Após a bateria nova de 44 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os cinco arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **80/80 PASS, 0 FAIL** (TAP, ~1,40 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
+Após a bateria nova de 47 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os cinco arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **83/83 PASS, 0 FAIL** (TAP, ~1,66 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
 
 Hashes das três suítes originais:
 - `combined.test.mjs`: `67390b0a5179c849a217712bf0e2ff74c8587937`
@@ -55,7 +55,7 @@ O comando local executado:
 CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test scripts/tests/read-boundary*.test.mjs
 ```
 
-Resultado TAP: **44 testes, 44 pass, 0 fail**, duração reportada ~609ms. As cinco integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada e estados restritos. O arquivo já entra no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
+Resultado TAP: **47 testes novos, 47 pass, 0 fail** (em execução conjunta com 36 herdados, total 83/83). As oito integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. O arquivo já entra no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
 ## Barreiras não dispensadas
 
