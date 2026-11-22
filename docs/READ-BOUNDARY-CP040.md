@@ -20,7 +20,7 @@ Incremento isolado, sem alterar Crownicles Core, bot, dados de jogadores, `web/`
 | Sem cookie/Bearer, credencial inválida ou falha no verificador | 401 |
 | Rota diferente | 404 |
 | Método não GET | 405, `Allow: GET` |
-| Query extra, seção duplicada, body, URL/header ambíguos, Bearer malformado ou cookie+Bearer simultâneos | 400 |
+| Query extra, seção duplicada, body, URL/header ambíguos, Bearer malformado, cookies duplicados ou cookie+Bearer simultâneos | 400 |
 | Erro SQL, contrato inválido, seção extra/omissa, resposta excessiva | 503 |
 
 O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, resposta SQL ou dados parciais. Todas as respostas incluem `Cache-Control: private, no-store`, `Vary: Cookie, Authorization`, `X-Content-Type-Options: nosniff` e `Cross-Origin-Resource-Policy: same-origin`, sem CORS permissivo. O teto é **128 KiB após projeção**; isso não substitui limites de queries, deadline ou memória.
@@ -31,7 +31,7 @@ O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, re
 node --test scripts/tests/read-boundary.test.mjs
 ```
 
-Há **42 testes Node locais aprovados** na mesma bateria: 34 cenários adversariais de fronteira, 3 cenários HTTP loopback, e 5 testes de integração com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
+Há **44 testes Node locais aprovados** na mesma bateria: 36 cenários adversariais de fronteira, 3 cenários HTTP loopback, e 5 testes de integração com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
 
 - `PortalPropertyQuery.ts`: `8bd4916731abc776f578c562e77ca54f165ed285`
 - `PortalGardenQuery.ts`: `ee186346b6a621619643e31949a876d2ee490720`
@@ -46,7 +46,7 @@ O comando local executado:
 CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test scripts/tests/read-boundary*.test.mjs
 ```
 
-Resultado TAP: **42 testes, 42 pass, 0 fail**, duração reportada ~642ms. As cinco integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada e estados restritos. O arquivo já entra no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
+Resultado TAP: **44 testes, 44 pass, 0 fail**, duração reportada ~609ms. As cinco integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada e estados restritos. O arquivo já entra no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
 ## Barreiras não dispensadas
 
