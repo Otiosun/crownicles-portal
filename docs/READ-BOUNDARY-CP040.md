@@ -148,3 +148,11 @@ Em cada caso o módulo original foi **restaurado**. Todos os 116 testes passaram
 5. Runner GitHub Actions funcional; revisão do código e aceite independente da direção artística.
 
 **Não conectar ao bot, registrar rota pública, publicar, fazer merge nem considerar a fronteira uma proteção operacional** enquanto faltarem os gates.
+## Handoff fechado desta sessão
+
+**Ponto de entrada para outra sessão:** abrir [PR #6](https://github.com/Otiosun/crownicles-portal/pull/6), conferir o head e executar `node scripts/reproduce-cp040.mjs` em checkout limpo com Node >=22 e TypeScript 5.8.3. Resultado esperado em 22/11: `CP040_UPSTREAM=9/9` e **116/116 PASS**. Se os arquivos herdados do PR-base mudarem, o reproducer irá bloquear por hash: reavaliar cada mudança conscientemente antes de atualizar o manifesto, em vez de remover a verificação.
+
+**Isolamento verificável:** 8 arquivos **adicionados** relativos à branch base; nenhum arquivo base modificado. Não confundir `integration/gateway/read-boundary.mjs` com endpoint implantado: `resolveVerifiedSubject` e `readSnapshot` são contratos injetados e só existem como doubles nos testes. Não há adaptador MariaDB/Keycloak real.
+
+**Ponto de parada seguro:** CP040-LAB validado; próximos atos de integração dependem de CP027 MariaDB, CI com runner e autorização OIDC/HTTPS real. Não avançar para conexão de jogadores nem liberar UI pelo simples sucesso local. A camada artística/UX continua separada e sem aceite de release.
+
