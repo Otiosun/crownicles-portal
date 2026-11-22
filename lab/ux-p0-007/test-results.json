@@ -1,0 +1,496 @@
+{
+  "summary": {
+    "id": "UX-P0-007",
+    "date": "2026-11-22",
+    "checks": 96,
+    "passed": 96,
+    "failed": 0,
+    "mode": "Chromium + data: ESM; local HTTP bytes via Python urllib, browser HTTP navigation blocked",
+    "limitations": [
+      "No real screen reader or human testing",
+      "No browser HTTP navigation, server auth, Core, DB, CI runner, merge, or deploy"
+    ]
+  },
+  "checks": [
+    {
+      "name": "HTTP bytes text/html",
+      "pass": true,
+      "context": "200 text/html 16403"
+    },
+    {
+      "name": "HTTP bytes text/javascript",
+      "pass": true,
+      "context": "200 text/javascript 6147"
+    },
+    {
+      "name": "relative ESM URL points to machine",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 starts unauthenticated",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 profile shows factual fixture",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 focus visible",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 AX main/nav/heading",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 AX groups",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 slot 0 has neutral label",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 ID=0 selected",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 slot 1 details",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 slot 1 restored",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 slot 2 details",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 slot 2 restored",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 inventory 100% root no horizontal scroll",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 inventory 100% no internal clipped blocks",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "320 inventory 200% root no horizontal scroll",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 inventory 200% no internal clipped blocks",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "320 change category resets selected",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 restricted purges records",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 not initialized distinct",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 unavailable offers retry",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 loading purges old records",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 401 clears all data",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "320 no JS errors",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "390 starts unauthenticated",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 profile shows factual fixture",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 focus visible",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 AX main/nav/heading",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 AX groups",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 slot 0 has neutral label",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 ID=0 selected",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 slot 1 details",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 slot 1 restored",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 slot 2 details",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 slot 2 restored",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 inventory 100% root no horizontal scroll",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 inventory 100% no internal clipped blocks",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "390 inventory 200% root no horizontal scroll",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 inventory 200% no internal clipped blocks",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "390 change category resets selected",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 restricted purges records",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 not initialized distinct",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 unavailable offers retry",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 loading purges old records",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 401 clears all data",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 no JS errors",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "768 starts unauthenticated",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 profile shows factual fixture",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 focus visible",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 AX main/nav/heading",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 AX groups",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 slot 0 has neutral label",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 ID=0 selected",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 slot 1 details",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 slot 1 restored",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 slot 2 details",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 slot 2 restored",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 inventory 100% root no horizontal scroll",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 inventory 100% no internal clipped blocks",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "768 inventory 200% root no horizontal scroll",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 inventory 200% no internal clipped blocks",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "768 change category resets selected",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 restricted purges records",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 not initialized distinct",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 unavailable offers retry",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 loading purges old records",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 401 clears all data",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "768 no JS errors",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "1440 starts unauthenticated",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 profile shows factual fixture",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 focus visible",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 AX main/nav/heading",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 AX groups",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 slot 0 has neutral label",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 ID=0 selected",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 slot 1 details",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 slot 1 restored",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 slot 2 details",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 slot 2 restored",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 inventory 100% root no horizontal scroll",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 inventory 100% no internal clipped blocks",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "1440 inventory 200% root no horizontal scroll",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 inventory 200% no internal clipped blocks",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "1440 change category resets selected",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 restricted purges records",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 not initialized distinct",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 unavailable offers retry",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 loading purges old records",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 401 clears all data",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "1440 no JS errors",
+      "pass": true,
+      "context": "[]"
+    },
+    {
+      "name": "keyboard skip link first",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "skip link moves actual DOM focus",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "tab reaches start",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "tab reaches inventory action",
+      "pass": true,
+      "context": ""
+    },
+    {
+      "name": "390 touch targets at least 44px",
+      "pass": true,
+      "context": "[]"
+    }
+  ]
+}
