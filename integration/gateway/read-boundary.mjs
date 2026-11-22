@@ -38,7 +38,8 @@ function getCredential(headers,name){
     value=keys.length?headers[keys[0]]:undefined;
   }
   if(value===undefined||value===null||value==='') return null;
-  if(typeof value!=='string'||Buffer.byteLength(value,'utf8')>MAX_HEADER||/[\x00-\x1F\x7F]/.test(value)) throw Error('BAD_CREDENTIAL');
+  if(typeof value!=='string'||Buffer.byteLength(value,'utf8')>MAX_HEADER||/[\x00-\x1F\x7F]/.test(value)||!value.trim()) throw Error('BAD_CREDENTIAL');
+  if(name==='authorization' && !/^Bearer [A-Za-z0-9._~+/-]+=*$/i.test(value)) throw Error('INVALID_BEARER_FORMAT');
   return value;
 }
 function parseReadRequest(request){
