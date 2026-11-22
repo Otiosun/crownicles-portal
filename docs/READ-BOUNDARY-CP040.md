@@ -63,6 +63,19 @@ CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test \
 
 Resultado TAP: **51 testes novos, 51 pass, 0 fail** (em execução conjunta com 36 herdados, total 87/87). As oito integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os três novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
+## Prova adversarial da própria suíte (mutação local, sem commit)
+
+Em diretório temporário isolado, foram injetados **quatro defeitos intencionais, um por vez**, no módulo CP040, executando-se os testes e restaurando-se integralmente o original após cada variante. Nenhum mutante foi salvo no GitHub:
+
+| Falha intencional | Resultado do conjunto novo |
+|---|---|
+| Desativar verificação de `rawHeaders` duplicados | **3 testes reprovaram** |
+| Desativar detecção de cookies duplicados | **1 teste reprovou** |
+| Aceitar `actorId` arbitrário enviado pelo browser | **3 testes reprovaram** |
+| Ignorar a seleção de seções e tentar ler todas | **11 testes reprovaram** |
+
+Após restauração do módulo original, a bateria conjunta terminou novamente em **87/87 PASS**. Isso demonstra sensibilidade dos testes a quatro regressões importantes; **não** é cobertura formal completa, fuzzing exaustivo, teste MariaDB ou garantia de segurança em produção.
+
 ## Matriz de aceite para a próxima integração
 
 | Gate | Estado em 22/11 | Evidência necessária para avançar |
