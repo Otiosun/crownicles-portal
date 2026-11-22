@@ -72,6 +72,12 @@ CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test \
 
 Resultado TAP: **80 testes novos, 80 pass, 0 fail** (em execução conjunta com 36 herdados, total 116/116). As nove integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os cinco novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
+## Estabilidade de reprodução e auditoria AST do gateway
+
+Após a extração limpa do pacote (116/116), o comando `node scripts/reproduce-cp040.mjs` foi executado **10 vezes consecutivas**, com **10/10 execuções completas aprovadas** (cada repetição passou os mesmos 116 testes; não são 1.160 testes distintos). Uma execução adicional forçou `--test-concurrency=1` e `NODE_OPTIONS=--unhandled-rejections=strict`: **116/116 PASS**. Não houve falha transitória nessas execuções; a amostra é limitada a este host Node 22.
+
+O gateway foi analisado sintaticamente com AST de TypeScript 5.8.3: **0 diagnósticos de parse**, import estático único `node:module`, `require` literal único do projetor `../../web/contract-adapter.js`, exports apenas `createPortalReadBoundary` e `READ_BOUNDARY_POLICY`; nenhuma chamada direta detectada de `fetch`, `eval`, `Function`, `save`, `update`, `delete`, `destroy`, `create`, `findOrCreate`, `bulkCreate` ou `query`. É um **controle estático focalizado, não auditoria formal de todas as formas de I/O ou um sandbox**.
+
 ## Porta reproduzível e autenticidade do corpus (CP040-REPRO)
 
 `scripts/reproduce-cp040.mjs` é um **comando de laboratório offline**, sem rede, autenticação ou banco, criado para executar novamente as 8 suítes envolvidas sem confiar em instruções manuais. Ele verifica **9/9 blobs SHA-1 Git** herdados do PR-base, exige Node >=22 e TypeScript **5.8.3**, inicia os testes sob prazo local de 60 segundos e retorna código de erro em qualquer divergência.
