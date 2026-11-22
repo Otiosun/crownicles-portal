@@ -23,7 +23,7 @@ O PR #1 e o CP040 cobrem \`property,chest,garden,pet,pantry\`, mas o primeiro fl
 node --test scripts/tests/p0-native*.test.mjs
 \`\`\`
 
-**25/25 testes Node 22 aprovados**, incluindo limites de slot e quatro categorias, duplicatas, item ID 0, ausência de plantas, campos sensíveis, flags opcionais, sentinelas do perfil e falha fechada. Comparação de duas fixtures CP014 legadas válidas com o projetor anterior: **paridade 2/2** na primeira execução (antes do ajuste dos talismãs); o ajuste preserva nomes CP014 quando todas as três flags estão presentes e não altera as duas fixtures de paridade.
+**28/28 testes Node 22 aprovados**, incluindo limites de slot e quatro categorias, duplicatas, item ID 0, ausência de plantas, campos sensíveis, flags opcionais, sentinelas do perfil e falha fechada. Comparação de duas fixtures CP014 legadas válidas com o projetor anterior: **paridade 2/2** na primeira execução (antes do ajuste dos talismãs); o ajuste preserva nomes CP014 quando todas as três flags estão presentes e não altera as duas fixtures de paridade.
 
 Os pacotes de origem foram recuperados do Drive:
 - **CP012**: ID \`1ksMlpV-p91V4vOtD2u8JCCG_Xymn38go\`; SHA-256 ZIP \`edeff51402b55638818971b4dea75ad894120633d224b9e3c1315958ba11eb1b\`; **71/71 testes** locais de seu próprio laboratório.
@@ -34,7 +34,7 @@ Os pacotes de origem foram recuperados do Drive:
 
 ## QA adversarial adicional
 
-`scripts/tests/p0-native-fuzz.test.mjs` executa **2.000 permutações determinísticas** de slot/capacidade com semente `0xC042BA5E` nas quatro categorias e confirma que apenas `0 < slot < capacity` produz resposta `ready`. Ainda verifica exclusão de campos internos em cada categoria e 120 alternâncias entre dados sintéticos e estado `restricted`, sem retenção de payload anterior. Os três testes são parte dos **25/25** acima, não se somam a eles. A cobertura é sintética; não é fuzzing exaustivo de modelos MariaDB.
+`scripts/tests/p0-native-fuzz.test.mjs` executa **2.000 permutações determinísticas** de slot/capacidade com semente `0xC042BA5E` nas quatro categorias e confirma que apenas `0 < slot < capacity` produz resposta `ready`. Ainda verifica exclusão de campos internos em cada categoria e 120 alternâncias entre dados sintéticos e estado `restricted`, sem retenção de payload anterior. Os três testes são parte dos **28/28** acima, não se somam a eles. A cobertura é sintética; não é fuzzing exaustivo de modelos MariaDB.
 
 ## Auditoria cruzada com PR #10 (ponte UX independente)
 
@@ -44,6 +44,12 @@ A [ponte PR #10](https://github.com/Otiosun/crownicles-portal/pull/10) usa `inte
 2. O guard valida `positive(r.slot)`, mas não impõe `r.slot<category.capacity`. Seu teste `Guard-03` adiciona reserva no **slot 2** com capacidade **2** e a aprova. Para demonstrar IDs duplicados em slots diferentes, o fixture deve declarar capacidade **3 ou maior**; reservar exatamente em `slot=capacity` deve falhar.
 
 A prova cruzada de **5/5 testes** CP042↔UX-P0-003 usa a máquina ESM e **não** o novo guard do PR #10. Pacote isolado no [Drive do projeto](https://drive.google.com/file/d/1ACQVYpfYj87jPYzESbSp_T5vOfXTzM_f/view), com fontes, fixture, TAP e hashes. A divergência foi registrada na issue #8 e no PR #10, sem editar o trabalho alheio.
+
+## Novo limite canônico: posições de plantas (CP042-PATCH-PLANTS)
+
+O código fixado de `Core/src/core/database/game/models/PlayerPlantSlot.ts` (Git blob `d9c54405d0aa5d69113be9b06204e787b1894c18`) inicializa plantas em slots **0 até `plantSlotCount-1`**; o slot de sementes é outra família (`slotType=SEED,slot=0`). Portanto, cada `plants.plantSlots[].slot` reportado pelo jogador precisa satisfazer `0 <= slot < maxPlantSlots`. A presença de um `seed` não consome capacidade de plantas. O projetor agora rejeita `slot===maxPlantSlots` e `slot=9000` no inventário com `maxPlantSlots=2`, preservando resposta `{state:'unavailable'}` sem nenhum payload; aceita `maxPlantSlots=0` com lista vazia e semente independente.
+
+Foram adicionados **3 testes** à suíte de 25, total **28/28 PASS** com Node22 em laboratório. O [guard do PR #12](https://github.com/Otiosun/crownicles-portal/pull/12) também foi ajustado; um conjunto cruzado real com CP042, guard e ponte UX passou **135/135** testes locais agregados (contagens das suítes versionadas e diferenciais, sem MariaDB/Keycloak). A versão original dos projetores CP012/014 não tinha essa validação de capacidade; a divergência é deliberada, fail-closed, não um erro confirmado em dados de produção.
 
 ## Gates ainda não cumpridos
 
