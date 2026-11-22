@@ -140,3 +140,15 @@ test('CP043 600 seeded talisman partial reports preserve presence and type',()=>
   assert.equal(isProjectedP0('inventory',i),flags.some(k=>Object.hasOwn(i.talismans,k)),String(n));
  }
 });
+test('CP043 filled plant slot at maxPlantSlots is never a valid slot',()=>{
+ let i=inventory();i.plants={kind:'reported',maxPlantSlots:2,linkedToHomeStorage:false,plantSlots:[{plantId:3,slot:2}]};
+ rejects('inventory',i);
+});
+test('CP043 huge plant slot is denied even if other fields are valid',()=>{
+ let i=inventory();i.plants={kind:'reported',maxPlantSlots:1,linkedToHomeStorage:false,plantSlots:[{plantId:3,slot:9000}]};
+ rejects('inventory',i);
+});
+test('CP043 zero plant capacity allows independent seed but no filled plant slots',()=>{
+ let i=inventory();i.plants={kind:'reported',seed:4,maxPlantSlots:0,linkedToHomeStorage:false,plantSlots:[]};
+ accepts('inventory',i);
+});
