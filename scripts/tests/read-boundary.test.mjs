@@ -253,3 +253,12 @@ test('standard URLSearchParams encoded list remains a valid canonical request',a
  assert.equal(r.status,200);assert.equal(seen.read.length,1);
  assert.deepEqual(seen.read[0].sections,['pet','garden']);
 });
+test('the nil UUID sentinel from a broken OIDC bridge is never a valid actor',async()=>{
+ let reads=0;
+ const handler=createPortalReadBoundary({
+  resolveVerifiedSubject:async()=> '00000000-0000-0000-0000-000000000000',
+  readSnapshot:async()=>{reads++;return absent(['pet','garden']);}
+ });
+ const r=await handler(req());
+ assert.equal(r.status,401);assert.equal(reads,0);
+});
