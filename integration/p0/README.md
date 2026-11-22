@@ -1,6 +1,6 @@
 # CP041 — CP012/014 → UX-P0-003 read-response bridge
 
-**Laboratório isolado. Não é gateway nem autenticação de produção.** Este diretório adiciona somente um adaptador funcional de envelopes de resposta e testes. Não altera a máquina de navegação `lab/ux-p0-003/machine.mjs` nem CP040. `chest` é baú da moradia e **não** é inventário pessoal.
+**Laboratório isolado. Não é gateway nem autenticação de produção.** Este diretório adiciona um adaptador de envelopes de resposta, verificador estrito do DTO projetado e testes. Não altera a máquina de navegação `lab/ux-p0-003/machine.mjs` nem CP040. `chest` é baú da moradia e **não** é inventário pessoal.
 
 ## Fontes verificadas
 
@@ -17,23 +17,24 @@
 
 1. Servidor autenticado/autorizado (ainda não ligado) resolve sujeito **antes** de obter CP014 snapshot. O navegador nunca envia actorId, askedPlayer, keycloakId, guildId, homeId ou seleção de conta como autorização.
 2. CP014 autorizado devolve `{status, body:{state, asOf, data?}}`, com `projectProfile` ou `projectInventory` já aplicados no servidor. A resposta HTTP 401 vigente indica perda de sessão. Este adaptador **não aceita pacotes nativos brutos como prova de autorização**.
-3. `startRead(state, section, requestId)` prepara a época da sessão e remove dados antigos. `finishRead(state, token, envelope)` gera `FETCH_FINISHED` para a máquina UX. Respostas obsoletas por `epoch/requestId` são ignoradas.
-4. `ready` usa os dados já sanitizados; `restricted`, `not_initialized` e `unavailable` não possuem payload de jogo. Payload malformado, estado desconhecido, erro HTTP ou data suspeita é convertido para `unavailable`. `401` limpa **a sessão inteira** se corresponder à requisição atual.
-5. `id=0` em slot ativo continua válido. Seleção é `{category,slot,id}`; slots são capacidade. `maximum:{kind:'unbounded'}` não vira número fictício. Plantas e talismãs `not_reported` não viram falsos/zero. Sem nomes de itens/arte inventados nem nome público derivado de keycloakId. Nenhuma ação de equipar/usar/vender.
-6. Somente seções `profile` e `inventory` são aceitas. O CP040 v1 continua independente com `pet,garden,property,chest,pantry`; sua allowlist **não** foi alterada. Integração produtiva exigiria contrato versionado e auditoria de segurança.
+3. `projection-guard.mjs` valida ESTRITAMENTE os campos de cada DTO CP014 (incluindo atributos aninhados, tipos, máximos discriminados e slots únicos), antes de entregar `ready` à máquina UX. Isso reduz erros de integração/exposição acidental no cliente, mas **não converte o cliente em controle de acesso**. O servidor continua devendo realizar allowlist, autenticação e autorização.
+4. `startRead(state, section, requestId)` prepara a época da sessão e remove dados antigos. `finishRead(state, token, envelope)` gera `FETCH_FINISHED` para a máquina UX. Respostas obsoletas por `epoch/requestId` são ignoradas.
+5. `ready` usa os dados já sanitizados; `restricted`, `not_initialized` e `unavailable` não possuem payload de jogo. Payload malformado, estado desconhecido, erro HTTP ou data suspeita é convertido para `unavailable`. `401` limpa **a sessão inteira** se corresponder à requisição atual.
+6. `id=0` em slot ativo continua válido. Seleção é `{category,slot,id}`; slots são capacidade. `maximum:{kind:'unbounded'}` não vira número fictício. Plantas e talismãs `not_reported` não viram falsos/zero. Sem nomes de itens/arte inventados nem nome público derivado de keycloakId. Nenhuma ação de equipar/usar/vender.
+7. Somente seções `profile` e `inventory` são aceitas. O CP040 v1 continua independente com `pet,garden,property,chest,pantry`; sua allowlist **não** foi alterada. Integração produtiva exigiria contrato versionado e auditoria de segurança.
 
 ## Reproduzir
 
 ```sh
 # Na raiz deste PR (Node 22+, sem dependências externas):
-node --test integration/p0/response-bridge.test.mjs
+node --test integration/p0/response-bridge.test.mjs integration/p0/projection-guard.test.mjs
 
 # Extrair o CP014 original a partir do ZIP privado, SEM editar os arquivos.
 # Teste cruzado exige fonte exata; não faz fallback para cópia artificial:
 CP014_GATEWAY_DIR=/caminho/CP014/gateway node --test integration/p0/compat-cp014.test.mjs
 ```
 
-**Evidência da rodada de 22/11/2026:** 23/23 testes independentes da ponte, 18/18 testes cruzados CP014 real + máquina UX, 83/83 testes do gateway CP014 original reexecutados localmente separadamente. São **41 novos testes CP041** e **83 históricos reexecutados**, não 124 testes inéditos. Não há prova de browser HTTP real, autorização do Core/MariaDB, OIDC/Keycloak, revogação produtiva ou CI; a UX/arte permanece em avaliação.
+**Evidência da rodada de 22/11/2026:** 23/23 testes independentes da ponte, 53/53 testes do verificador estrito (incluindo 1.600 mutações determinísticas), 18/18 testes cruzados CP014 original + máquina UX e 83/83 testes do gateway CP014 reexecutados separadamente. São **94 novos testes CP041** e **83 históricos reexecutados**, não 177 testes inéditos. Não há prova de browser HTTP real, autorização do Core/MariaDB, OIDC/Keycloak, revogação produtiva ou CI; a UX/arte permanece em avaliação.
 
 ## Bloqueios e propriedade da mudança
 
