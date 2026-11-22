@@ -14,6 +14,30 @@ const SECTIONS=Object.freeze(['property','chest','garden','pet','pantry']);
 const SECTION_SET=new Set(SECTIONS);
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 const NIL_UUID='00000000-0000-0000-0000-000000000000';
+/* Subject proofs are server-only outputs of a cryptographic verifier.
+ * The optional bound form lets the gateway compare binding epochs, not just
+ * actor UUIDs, when a session is revoked/rebound during a slow SQL read.
+ * Both before and after checks must consult live revocation/binding state. */
+function verifiedProof(value){
+  try {
+    const actor=typeof value==='string'?value:value?.actor;
+    if(typeof actor!=='string'||!UUID.test(actor)||actor.toLowerCase()===NIL_UUID)return null;
+    if(typeof value==='string')return Object.freeze({kind:'legacy',actor:actor.toLowerCase()});
+    if(!value||typeof value!=='object'||Array.isArray(value))return null;
+    // Read accessors once; a broken connector must fail closed on any getter error.
+    const bindingRef=value.bindingRef, bindingEpoch=value.bindingEpoch;
+    if(typeof bindingRef!=='string'||!bindingRef||bindingRef.length>256||
+       /[\x00-\x20\x7f]/.test(bindingRef)||
+       !Number.isSafeInteger(bindingEpoch)||bindingEpoch<0)return null;
+    return Object.freeze({kind:'bound',actor:actor.toLowerCase(),
+      bindingRef,bindingEpoch});
+  }catch{return null;}
+}
+function sameSession(before,after){
+  return !!before&&!!after&&before.kind===after.kind&&before.actor===after.actor&&
+    (before.kind==='legacy'||(before.bindingRef===after.bindingRef&&before.bindingEpoch===after.bindingEpoch));
+}
+
 const COOKIE_NAME=/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const MAX_URL=512;
 const MAX_HEADER=16*1024;
@@ -158,8 +182,12 @@ function parseReadRequest(request){
 }
 
 /**
- * resolveVerifiedSubject({authorization,cookie}) -> keycloak UUID or null;
- * must verify signature/issuer/audience/time/revocation, not parse unverified JWT.
+ * resolveVerifiedSubject({authorization,cookie},{signal,phase}) -> keycloak UUID
+ * or {actor,bindingRef,bindingEpoch}; called BEFORE and AFTER reads;
+ * must verify signature/issuer/audience/time/revocation and binding epoch from
+ * authoritative state in BOTH passes, not parse or cache unverified JWTs.
+ * Default requires {actor,bindingRef,bindingEpoch}; unbound UUID strings are
+ * accepted ONLY when allowUnboundMockSubjects=true for legacy fixtures.
  * readSnapshot({actor,sections,now}) -> PortalReadBundle, within a real READ ONLY
  * repeatable-read transaction and with DB ownership predicates. The caller,
  * not the browser, owns transaction and identity.
@@ -167,13 +195,15 @@ function parseReadRequest(request){
 export function createPortalReadBoundary({
   resolveVerifiedSubject,readSnapshot,
   authTimeoutMs=DEFAULT_AUTH_TIMEOUT_MS,
-  readTimeoutMs=DEFAULT_READ_TIMEOUT_MS
+  readTimeoutMs=DEFAULT_READ_TIMEOUT_MS,
+  allowUnboundMockSubjects=false
 }={}){
   if(typeof resolveVerifiedSubject!=='function'||typeof readSnapshot!=='function'){
     throw TypeError('VERIFIED_SESSION_AND_SNAPSHOT_READER_REQUIRED');
   }
   validateTimeout(authTimeoutMs,'AUTH');
   validateTimeout(readTimeoutMs,'READ');
+  if(typeof allowUnboundMockSubjects!=='boolean')throw TypeError('MOCK_SUBJECT_POLICY_INVALID');
   return async function handlePortalRead(request){
     let parsed;
     try {parsed=parseReadRequest(request);}catch{return unavailable(400);}
@@ -185,12 +215,13 @@ export function createPortalReadBoundary({
     if(request.signal?.aborted)return unavailable(503);
     let actor;
     try {
-      actor=await withDeadline(signal=>resolveVerifiedSubject(parsed.credentials,Object.freeze({signal})),authTimeoutMs,request.signal);
+      actor=await withDeadline(signal=>resolveVerifiedSubject(parsed.credentials,Object.freeze({signal,phase:'before-read'})),authTimeoutMs,request.signal);
     }catch{return unavailable(request.signal?.aborted?503:401);}
-    if(typeof actor!=='string'||!UUID.test(actor)||actor.toLowerCase()===NIL_UUID)return unavailable(401);
+    const proof=verifiedProof(actor);
+    if(!proof||(!allowUnboundMockSubjects&&proof.kind!=='bound'))return unavailable(401);
     let raw;
     try {
-      raw=await withDeadline(signal=>readSnapshot(Object.freeze({actor,sections:parsed.sections,now:new Date(),signal})),readTimeoutMs,request.signal);
+      raw=await withDeadline(signal=>readSnapshot(Object.freeze({actor:proof.actor,sections:parsed.sections,now:new Date(),signal})),readTimeoutMs,request.signal);
     }catch{return unavailable(503);}
     let projected;
     try {projected=normalizeBundle(raw);}catch{return unavailable(503);}
@@ -201,6 +232,17 @@ export function createPortalReadBoundary({
     let body;
     try {body=JSON.stringify(projected);}catch{return unavailable(503);}
     if(!body || Buffer.byteLength(body,'utf8')>MAX_RESPONSE)return unavailable(503);
+    // Revalidate *after* the DB read and projection. A logout, revocation,
+    // actor switch, or binding epoch change must not publish stale private data.
+    // This resolver must NOT cache the earlier verification across stages.
+    let fresh;
+    try {
+      fresh=await withDeadline(signal=>resolveVerifiedSubject(parsed.credentials,
+        Object.freeze({signal,phase:'after-read'})),authTimeoutMs,request.signal);
+    }catch{return unavailable(request.signal?.aborted?503:401);}
+    const freshProof=verifiedProof(fresh);
+    if(!sameSession(proof,freshProof))return unavailable(401);
+    if(request.signal?.aborted)return unavailable(503);
     return Object.freeze({status:200,headers:BASE_HEADERS,body});
   };
 }
