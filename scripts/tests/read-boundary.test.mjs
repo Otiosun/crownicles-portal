@@ -233,3 +233,23 @@ test('single critical raw headers continue through verified subject resolver',as
  const {handle,seen}=make();const r=await handle(req({headers:{authorization:'Bearer valid'},rawHeaders:['authorization','Bearer valid','Accept','application/json']}));
  assert.equal(r.status,200);assert.equal(seen.read.length,1);
 });
+test('noncanonical but URL-decodable queries cannot trigger authentication',async()=>{
+ const {handle,seen}=make();
+ for(const rawQuery of [
+  'sections=pet&','sections=pet&&','%73ections=pet',
+  'sections=pet%2cgarden','sections=pet%2C%67arden',
+  'sections=pet,garden&','sections=pet%2Cgarden&',
+  'sections=pet,garden%2Cproperty','sections=pet%2Cgarden,property'
+ ]){
+  assert.equal((await handle(req({url:'/api/portal/v1/read?'+rawQuery}))).status,400,rawQuery);
+ }
+ assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
+});
+test('standard URLSearchParams encoded list remains a valid canonical request',async()=>{
+ const {handle,seen}=make();
+ const qs=new URLSearchParams({sections:'pet,garden'}).toString();
+ assert.equal(qs,'sections=pet%2Cgarden');
+ const r=await handle(req({url:'/api/portal/v1/read?'+qs}));
+ assert.equal(r.status,200);assert.equal(seen.read.length,1);
+ assert.deepEqual(seen.read[0].sections,['pet','garden']);
+});
