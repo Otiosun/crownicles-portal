@@ -192,3 +192,16 @@ test('zero content-length and single bearer credential remain valid',async()=>{
  const {handle,seen}=make();const r=await handle(req({headers:{authorization:'Bearer abc','content-length':'0'}}));
  assert.equal(r.status,200);assert.equal(seen.auth.length,1);
 });
+
+test('reject empty or whitespace-only identity headers before the resolver',async()=>{
+ const {handle,seen}=make();
+ for(const headers of [{cookie:' '},{authorization:'   '},{authorization:'Basic opaque'},{authorization:'Bearer '},{authorization:'Bearer a,b'},{authorization:'Bearer a\nb'}]){
+  assert.equal((await handle(req({headers}))).status,400,JSON.stringify(headers));
+ }
+ assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
+});
+test('accept valid RFC6750-style bearer format with opaque token alphabet',async()=>{
+ const {handle,seen}=make();const r=await handle(req({headers:{authorization:'bearer a-Z_123.+/~=='}}));
+ assert.equal(r.status,200);assert.equal(seen.read.length,1);
+ assert.deepEqual(seen.auth[0],{authorization:'bearer a-Z_123.+/~==',cookie:null});
+});
