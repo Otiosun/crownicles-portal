@@ -122,6 +122,11 @@ function parseReadRequest(request){
   const names=values[0].split(',');
   if(names.length<1||names.length>SECTIONS.length||names.some(n=>!SECTION_SET.has(n))||
      new Set(names).size!==names.length) return {status:400};
+  // Parsers and caches can disagree on escaped parameter names, trailing '&'
+  // or mixed separators. Accept just the plain form and URLSearchParams form.
+  const rawQuery=request.url.slice(PATH.length+1);
+  if(rawQuery!=='sections='+names.join(',')&&
+     rawQuery!=='sections='+names.join('%2C'))return {status:400};
   let authorization,cookie;
   try {
     authorization=getCredential(request.headers,'authorization');
