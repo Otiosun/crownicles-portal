@@ -7,8 +7,8 @@ Incremento isolado, sem alterar Crownicles Core, bot, dados de jogadores, `web/`
 ## Contratos e autoridade
 
 - Entrada: objeto `{method:'GET',url:'/api/portal/v1/read?sections=pet,garden',headers:{cookie:'...'}}` ou `Headers`. Saída: `{status,headers,body}`, sem escrita.
-- `resolveVerifiedSubject({authorization,cookie})` precisa verificar assinatura, emissor, audiência, expiração, revogação e sessão do Keycloak **no servidor**. Não é permitido aceitar JWT apenas decodificado, ID de usuário informado pelo cliente ou token de demonstração.
-- `readSnapshot({actor,sections,now})` precisa usar identidade do resolvedor, transação real consistente e somente leitura, credenciais SELECT-only, predicados de propriedade, limites de consulta e tempo. Integrar a `readPortalSectionsForServer` apenas em checkout isolado e após gates apropriados.
+- `resolveVerifiedSubject({authorization,cookie},{signal})` precisa verificar assinatura, emissor, audiência, expiração, revogação e sessão do Keycloak **no servidor**. Não é permitido aceitar JWT apenas decodificado, ID de usuário informado pelo cliente ou token de demonstração.
+- `readSnapshot({actor,sections,now,signal})` precisa usar identidade do resolvedor, transação real consistente e somente leitura, credenciais SELECT-only, predicados de propriedade, limites de consulta e tempo. Integrar a `readPortalSectionsForServer` apenas em checkout isolado e após gates apropriados.
 - `actor` vem exclusivamente do resolvedor de sessão verificada. Parâmetros/cabeçalhos com `actorId`, `userId`, `guildId`, `homeId`, `cityId` e similares **não conferem autorização** e não são encaminhados ao leitor.
 - Antes de serializar, a resposta passa pelo `normalizeBundle` original em `web/contract-adapter.js`. A projeção copia somente propriedades permitidas e exige exatamente o conjunto de seções requisitado. Isso é **minimização de dados, não prova de propriedade**.
 
@@ -21,11 +21,19 @@ Incremento isolado, sem alterar Crownicles Core, bot, dados de jogadores, `web/`
 | Rota diferente | 404 |
 | Método não GET | 405, `Allow: GET` |
 | Query extra, seção duplicada, body, URL/header ambíguos, Bearer malformado, cookies duplicados ou cookie+Bearer simultâneos | 400 |
-| Erro SQL, contrato inválido, seção extra/omissa, resposta excessiva | 503 |
+| Erro SQL, contrato inválido, seção extra/omissa, resposta excessiva, desconexão sinalizada | 503 |
 
 Em requisições Node HTTP, o adaptador também consulta `IncomingMessage.rawHeaders` para rejeitar cabeçalhos `Authorization`, `Cookie`, `Content-Length` e `Transfer-Encoding` duplicados, pois o Node pode normalizar ou descartar credenciais repetidas silenciosamente. Um teste HTTP loopback reproduz esse comportamento adversarial. A integração futura com outros servidores HTTP deve fornecer informação equivalente ou checar duplicações antes da normalização.
 
-O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, resposta SQL ou dados parciais. Todas as respostas incluem `Cache-Control: private, no-store`, `Vary: Cookie, Authorization`, `X-Content-Type-Options: nosniff` e `Cross-Origin-Resource-Policy: same-origin`, sem CORS permissivo. O teto é **128 KiB após projeção**; isso não substitui limites de queries, deadline ou memória.
+O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, resposta SQL ou dados parciais. Todas as respostas incluem `Cache-Control: private, no-store`, `Vary: Cookie, Authorization`, `X-Content-Type-Options: nosniff` e `Cross-Origin-Resource-Policy: same-origin`, sem CORS permissivo. O teto é **128 KiB após projeção**. Prazos de resposta agora são aplicados às duas etapas (autenticação: **2.500 ms**, leitura: **5.000 ms**, máximo configurável de **30.000 ms** por etapa), mas isso **não** limita consumo de memória, CPU síncrona ou duração real de uma consulta SQL que ignore cancelamento.
+
+## Prazos, cancelamento e desconexão (CP040-LATENCY)
+
+A fábrica aceita `authTimeoutMs` (padrão **2500**) e `readTimeoutMs` (padrão **5000**), inteiros no intervalo de **1 a 30000 ms**. Valores inválidos são rejeitados na construção, sem fallback silencioso. `resolveVerifiedSubject` recebe um segundo argumento com `{signal}`; `readSnapshot` recebe o `signal` junto ao sujeito e às seções. O sinal de cada etapa é abortado ao ultrapassar o prazo ou quando `request.signal` do adaptador HTTP sinaliza a desconexão. Uma falha de autenticação gera 401; timeout de leitura ou desconexão sinalizada produzem 503 sem dados internos.
+
+**Limite explícito da garantia:** `Promise.race` limita apenas o tempo de **resposta**. A operação assíncrona subjacente pode continuar rodando caso ignore o `AbortSignal`. O adaptador SQL de produção deverá executar cancelamento/rollback, configurar `statement_timeout` ou equivalente MariaDB, impor pool/limites de concorrência e confirmar liberação de recursos. Não há prova de cancelamento do MariaDB nesta rodada. Operações síncronas que bloqueiem o event loop tampouco são preemptadas por timers JavaScript.
+
+Para Node `IncomingMessage`, o adaptador HTTP só deve abortar `request.signal` quando a **resposta** fechar antes de `writableEnded` (evento `res.close`); usar `req.close` ingenuamente pode indicar apenas que o corpo da requisição terminou. Um cenário TCP loopback desconecta o cliente durante a leitura e confirma que o sinal chegou ao leitor simulado. Outros cinco cenários verificam abort durante sessão e leitura, não reutilização de dados pendentes e liberação dos listeners. Um teste adicional usa **40 requisições simultâneas de dois sujeitos sintéticos** no mesmo handler para buscar contaminação cruzada.
 
 ## Testes reproduzíveis
 
@@ -33,7 +41,7 @@ O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, re
 node --test scripts/tests/read-boundary*.test.mjs
 ```
 
-Há **51 testes Node locais aprovados** na mesma bateria: 39 cenários adversariais de fronteira, 4 cenários HTTP loopback, e 8 testes de integração com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
+Há **69 testes Node locais aprovados** na mesma bateria: 39 cenários adversariais de fronteira, 5 cenários HTTP loopback, 9 testes de integração e 16 testes de prazo/cancelamento com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
 
 - `PortalPropertyQuery.ts`: `8bd4916731abc776f578c562e77ca54f165ed285`
 - `PortalGardenQuery.ts`: `ee186346b6a621619643e31949a876d2ee490720`
@@ -44,7 +52,7 @@ Há **51 testes Node locais aprovados** na mesma bateria: 39 cenários adversari
 
 ### Regressão cruzada com o PR-base
 
-Após a bateria nova de 51 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os seis arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **87/87 PASS, 0 FAIL** (TAP, ~1,81 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
+Após a bateria nova de 69 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os seis arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **105/105 PASS, 0 FAIL** (TAP, ~1,73 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
 
 Hashes das três suítes originais:
 - `combined.test.mjs`: `67390b0a5179c849a217712bf0e2ff74c8587937`
@@ -61,7 +69,7 @@ CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test \
   web/tests/contract.test.cjs
 ```
 
-Resultado TAP: **51 testes novos, 51 pass, 0 fail** (em execução conjunta com 36 herdados, total 87/87). As oito integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os três novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
+Resultado TAP: **69 testes novos, 69 pass, 0 fail** (em execução conjunta com 36 herdados, total 105/105). As nove integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os quatro novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
 ## Prova adversarial da própria suíte (mutação local, sem commit)
 
@@ -74,13 +82,13 @@ Em diretório temporário isolado, foram injetados **quatro defeitos intencionai
 | Aceitar `actorId` arbitrário enviado pelo browser | **3 testes reprovaram** |
 | Ignorar a seleção de seções e tentar ler todas | **11 testes reprovaram** |
 
-Após restauração do módulo original, a bateria conjunta terminou novamente em **87/87 PASS**. Isso demonstra sensibilidade dos testes a quatro regressões importantes; **não** é cobertura formal completa, fuzzing exaustivo, teste MariaDB ou garantia de segurança em produção.
+Após restauração do módulo original, a bateria então existente terminou novamente em **87/87 PASS**; o resultado atual ampliado é **105/105 PASS**. Os quatro mutantes foram testados **antes** da adição da proteção de prazos e desconexão. Isso demonstra sensibilidade dos testes a quatro regressões importantes; **não** é cobertura formal completa, fuzzing exaustivo, teste MariaDB ou garantia de segurança em produção.
 
 ## Matriz de aceite para a próxima integração
 
 | Gate | Estado em 22/11 | Evidência necessária para avançar |
 |---|---|---|
-| CP040-LAB — contratos de entrada/saída, isolamento via fixtures | **APROVADO LOCALMENTE 87/87** | Fontes versionadas e testes locais reproduzíveis; não é teste de banco real |
+| CP040-LAB — contratos de entrada/saída, isolamento via fixtures | **APROVADO LOCALMENTE 105/105** | Fontes versionadas e testes locais reproduzíveis; não é teste de banco real |
 | CP040-CI — runner executa as etapas `npm run check` | **BLOQUEADO** | Workflow com runner, steps, logs e exit code reais; issue #3 |
 | CP027-DB — MariaDB nativo e leitura SELECT-only | **BLOQUEADO 0/12** | 12/12 testes originais em ambiente descartável, transação repeatable-read e ownership verificados |
 | CP040-CORE — TypeScript integrado no checkout Core fixado | **PENDENTE** | Compilação/typecheck nativos, importação legítima, sem registro de comando ou mutação |
