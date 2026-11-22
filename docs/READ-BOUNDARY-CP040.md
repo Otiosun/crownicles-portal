@@ -40,6 +40,15 @@ Há **44 testes Node locais aprovados** na mesma bateria: 36 cenários adversari
 - `integration/tests/fixture.mjs`: `43d3d8f3b93f408349bfdb3c51af75baa1d153d7`
 - `web/contract-adapter.js`: `c70b2cde80df8542eff7630470091f05a4e088e4`
 
+### Regressão cruzada com o PR-base
+
+Após a bateria nova de 44 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os cinco arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **80/80 PASS, 0 FAIL** (TAP, ~1,40 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
+
+Hashes das três suítes originais:
+- `combined.test.mjs`: `67390b0a5179c849a217712bf0e2ff74c8587937`
+- `native-projection.test.mjs`: `6661787bb251e340dfe25da8b0742d11fe26fcc9`
+- `contract.test.cjs`: `319b88a3c2868a9c505b4926f2952ed89c73a122`
+
 O comando local executado:
 
 ```sh
