@@ -49,8 +49,8 @@ test('no supplied cookie or bearer means no authenticator call and no database a
  assert.equal(r.status,401);assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
 });
 test('header names are case insensitive without forwarding identity-shaped headers',async()=>{
- const {handle,seen}=make();const r=await handle(req({headers:{CoOkIe:'opaque',AUTHORIZATION:'Bearer opaque', 'X-Actor':B}}));
- assert.equal(r.status,200);assert.deepEqual(seen.auth[0],{authorization:'Bearer opaque',cookie:'opaque'});
+ const {handle,seen}=make();const r=await handle(req({headers:{CoOkIe:'opaque', 'X-Actor':B}}));
+ assert.equal(r.status,200);assert.deepEqual(seen.auth[0],{authorization:null,cookie:'opaque'});
 });
 test('fetch Headers-style accessor works',async()=>{
  const {handle,seen}=make();const headers=new Headers({'authorization':'Bearer opaque'});
@@ -167,4 +167,28 @@ test('raw whitespace in URL is rejected instead of being normalized into a valid
 test('exotic request property getters fail closed without unhandled rejection',async()=>{
  const {handle,seen}=make();const r={method:'GET',get url(){throw Error('proxy-secret');}};
  const result=await handle(r);assert.equal(result.status,400);assert.ok(!result.body.includes('proxy-secret'));assert.equal(seen.auth.length,0);
+});
+
+test('reject dual credentials rather than selecting a bearer or cookie actor ambiguously',async()=>{
+ const {handle,seen}=make();const r=await handle(req({headers:{cookie:'A',authorization:'Bearer B'}}));
+ assert.equal(r.status,400);assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
+});
+test('reject advertised GET bodies even when request.body property is not set',async()=>{
+ const {handle,seen}=make();for(const headers of [
+  {cookie:'x','content-length':'42'}, {cookie:'x','transfer-encoding':'chunked'},
+  {cookie:'x','content-length':'not-a-number'}, {cookie:'x','content-length':'0','transfer-encoding':'chunked'}
+ ])assert.equal((await handle(req({headers}))).status,400);
+ assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
+});
+test('reject normalized dot-segments and encoded routes, not just parsed pathname',async()=>{
+ const {handle,seen}=make();for(const u of [
+  '/api/portal/v1/not/../read?sections=pet,garden',
+  '/api/portal/v1/%72ead?sections=pet,garden',
+  '/api/portal/v1//read?sections=pet,garden'
+ ])assert.notEqual((await handle(req({url:u}))).status,200,u);
+ assert.equal(seen.auth.length,0);
+});
+test('zero content-length and single bearer credential remain valid',async()=>{
+ const {handle,seen}=make();const r=await handle(req({headers:{authorization:'Bearer abc','content-length':'0'}}));
+ assert.equal(r.status,200);assert.equal(seen.auth.length,1);
 });
