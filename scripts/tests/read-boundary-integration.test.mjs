@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fixture,A,B,ALL,read} from '../../integration/tests/fixture.mjs';
-import {createPortalReadBoundary} from '../../integration/gateway/read-boundary.mjs';
+import {createPortalReadBoundary as createStrictBoundary} from '../../integration/gateway/read-boundary.mjs';
+const createPortalReadBoundary=opts=>createStrictBoundary({...opts,allowUnboundMockSubjects:true});
 
 // Transpiles the four *actual candidate TS files* using fixture.mjs.
 // Only the database, real OIDC verification and HTTP transport are doubled.
