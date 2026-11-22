@@ -16,6 +16,35 @@ const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 const MAX_URL=512;
 const MAX_HEADER=16*1024;
 const MAX_RESPONSE=128*1024;
+const DEFAULT_AUTH_TIMEOUT_MS=2500;
+const DEFAULT_READ_TIMEOUT_MS=5000;
+const MAX_GATE_TIMEOUT_MS=30000;
+
+function validateTimeout(value,name){
+  if(!Number.isSafeInteger(value)||value<1||value>MAX_GATE_TIMEOUT_MS){
+    throw new RangeError('INVALID_'+name+'_TIMEOUT');
+  }
+}
+/**
+ * A reply deadline, not hard cancellation of DB work. On timeout, AbortSignal
+ * is triggered; adapters MUST honor it and explicitly cancel/rollback SQL.
+ * A stuck adapter ignoring the signal may keep working after the reply.
+ */
+async function withDeadline(operation,timeoutMs){
+  const controller=new AbortController();
+  let timer;
+  const deadline=new Promise((_,reject)=>{
+    timer=setTimeout(()=>{
+      controller.abort();
+      reject(new Error('PORTAL_DEADLINE_EXCEEDED'));
+    },timeoutMs);
+  });
+  try {
+    return await Promise.race([Promise.resolve().then(()=>operation(controller.signal)),deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 const BASE_HEADERS=Object.freeze({
   'Content-Type':'application/json; charset=utf-8',
   'Cache-Control':'private, no-store',
@@ -110,10 +139,16 @@ function parseReadRequest(request){
  * repeatable-read transaction and with DB ownership predicates. The caller,
  * not the browser, owns transaction and identity.
  */
-export function createPortalReadBoundary({resolveVerifiedSubject,readSnapshot}={}){
+export function createPortalReadBoundary({
+  resolveVerifiedSubject,readSnapshot,
+  authTimeoutMs=DEFAULT_AUTH_TIMEOUT_MS,
+  readTimeoutMs=DEFAULT_READ_TIMEOUT_MS
+}={}){
   if(typeof resolveVerifiedSubject!=='function'||typeof readSnapshot!=='function'){
     throw TypeError('VERIFIED_SESSION_AND_SNAPSHOT_READER_REQUIRED');
   }
+  validateTimeout(authTimeoutMs,'AUTH');
+  validateTimeout(readTimeoutMs,'READ');
   return async function handlePortalRead(request){
     let parsed;
     try {parsed=parseReadRequest(request);}catch{return unavailable(400);}
@@ -121,11 +156,13 @@ export function createPortalReadBoundary({resolveVerifiedSubject,readSnapshot}={
       response(405,{state:'unavailable'},{Allow:'GET'}):unavailable(parsed.status);
     if(!parsed.credentials.authorization&&!parsed.credentials.cookie)return unavailable(401);
     let actor;
-    try {actor=await resolveVerifiedSubject(parsed.credentials);}catch{return unavailable(401);}
+    try {
+      actor=await withDeadline(signal=>resolveVerifiedSubject(parsed.credentials,Object.freeze({signal})),authTimeoutMs);
+    }catch{return unavailable(401);}
     if(typeof actor!=='string'||!UUID.test(actor))return unavailable(401);
     let raw;
     try {
-      raw=await readSnapshot(Object.freeze({actor,sections:parsed.sections,now:new Date()}));
+      raw=await withDeadline(signal=>readSnapshot(Object.freeze({actor,sections:parsed.sections,now:new Date(),signal})),readTimeoutMs);
     }catch{return unavailable(503);}
     let projected;
     try {projected=normalizeBundle(raw);}catch{return unavailable(503);}
@@ -140,4 +177,4 @@ export function createPortalReadBoundary({resolveVerifiedSubject,readSnapshot}={
   };
 }
 
-export const READ_BOUNDARY_POLICY=Object.freeze({path:PATH,sections:SECTIONS,maxUrlBytes:MAX_URL,maxResponseBytes:MAX_RESPONSE});
+export const READ_BOUNDARY_POLICY=Object.freeze({path:PATH,sections:SECTIONS,maxUrlBytes:MAX_URL,maxResponseBytes:MAX_RESPONSE,defaultAuthTimeoutMs:DEFAULT_AUTH_TIMEOUT_MS,defaultReadTimeoutMs:DEFAULT_READ_TIMEOUT_MS,maxTimeoutMs:MAX_GATE_TIMEOUT_MS});
