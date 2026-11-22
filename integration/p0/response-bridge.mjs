@@ -5,6 +5,7 @@
  * CP013/014 authorized gateway. In particular, this does not authorize access.
  */
 import { transition } from '../../lab/ux-p0-003/machine.mjs';
+import { isProjectedP0 } from './projection-guard.mjs';
 
 const SECTIONS = new Set(['profile', 'inventory']);
 const STATES = new Set(['ready', 'restricted', 'not_initialized', 'unavailable']);
@@ -34,12 +35,12 @@ export function mapReadResponse({section, epoch, requestId}, response) {
     return {...base,domainState:body.state};
   }
   if (!exact(body,['state','asOf','data']) || !own(body,'data') ||
-      !iso(body.asOf) || !record(body.data)) {
+      !iso(body.asOf) || !record(body.data) || !isProjectedP0(section,body.data)) {
     return {...base,domainState:'unavailable'};
   }
-  // The UX machine independently checks its allowlist and purges any extra
-  // fields. The nested domain source must FIRST have gone through CP014's
-  // projectProfile/projectInventory on the trusted server. No raw packets.
+  // Strictly check the projected DTO a SECOND time in the browser, in addition
+  // to the UX machine's root allowlist. This is NOT authorization. The trusted
+  // server must already have projected CP014 data. No raw game packets.
   return {...base,domainState:'ready',asOf:body.asOf,data:body.data};
 }
 
