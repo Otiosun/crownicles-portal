@@ -38,19 +38,28 @@ function getCredential(headers,name){
     value=keys.length?headers[keys[0]]:undefined;
   }
   if(value===undefined||value===null||value==='') return null;
-  if(typeof value!=='string'||value.length>MAX_HEADER||/[\x00-\x1F\x7F]/.test(value)) throw Error('BAD_CREDENTIAL');
+  if(typeof value!=='string'||Buffer.byteLength(value,'utf8')>MAX_HEADER||/[\x00-\x1F\x7F]/.test(value)) throw Error('BAD_CREDENTIAL');
   return value;
 }
 function parseReadRequest(request){
   if(!request || typeof request!=='object'||Array.isArray(request)) return {status:400};
-  if(typeof request.url!=='string'||request.url.length===0||request.url.length>MAX_URL||
+  if(typeof request.url!=='string'||request.url.length===0||Buffer.byteLength(request.url,'utf8')>MAX_URL||
      !request.url.startsWith('/')||request.url.startsWith('//')||request.url.includes('#')||
      /[\x00-\x20\x7F]/.test(request.url)) return {status:400};
   let url;
   try {url=new URL(request.url,'https://portal.invalid');} catch {return {status:400};}
-  if(url.pathname!==PATH) return {status:404};
+  // URL() normalizes dot-segments: reject altered raw paths before routing.
+  if(request.url.split('?')[0]!==PATH || url.pathname!==PATH) return {status:404};
   if(request.method!=='GET') return {status:405};
   if(request.body!==undefined&&request.body!==null) return {status:400};
+  // An undeclared GET body may be smuggled upstream; reject advertised payloads.
+  // The real HTTP adapter must also enforce transfer framing and body limits.
+  let contentLength,transferEncoding;
+  try {
+    contentLength=getCredential(request.headers,'content-length');
+    transferEncoding=getCredential(request.headers,'transfer-encoding');
+  } catch {return {status:400};}
+  if(transferEncoding!==null || (contentLength!==null && !/^0+$/.test(contentLength)))return {status:400};
   if([...url.searchParams.keys()].some(key=>key!=='sections'))return {status:400};
   const values=url.searchParams.getAll('sections');
   if(values.length!==1)return {status:400};
@@ -62,6 +71,7 @@ function parseReadRequest(request){
     authorization=getCredential(request.headers,'authorization');
     cookie=getCredential(request.headers,'cookie');
   }catch{return {status:400};}
+  if(authorization&&cookie) return {status:400}; // no ambiguous dual principal
   return {sections:Object.freeze(names),credentials:Object.freeze({authorization,cookie})};
 }
 
