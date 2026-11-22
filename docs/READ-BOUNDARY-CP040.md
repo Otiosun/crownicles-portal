@@ -31,7 +31,22 @@ O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, re
 node --test scripts/tests/read-boundary.test.mjs
 ```
 
-Há **32 testes Node de fronteira + 3 cenários HTTP loopback** cobrindo autorização por sujeito, falsificação de IDs do navegador, credenciais inconsistentes, falhas de resolvedor/SQL, respostas parciais, consultas inválidas, cabeçalhos duplicados, serialização sanitizada e anti-cache. Os arquivos já entram no glob existente de `npm run test:tools`. A execução local isolada em Node 22 passou **35/35** com o adaptador real de projeção copiado byte a byte (Git blob `c70b2cde80df8542eff7630470091f05a4e088e4`); usa doubles de sessão e leitor, **não** Keycloak/MariaDB. Os **5 testes adicionais de integração** em `scripts/tests/read-boundary-integration.test.mjs` ligam a fronteira aos quatro candidatos TypeScript efetivos via fixture do repositório, mas **não foram executados nesta rodada** por falta de checkout completo nesse ambiente. Assim, existem 40 testes novos versionados, dos quais 35 têm execução local confirmada. O `npm run check` completo da branch e GitHub Actions continuam sem confirmação; Actions bloqueado antes do runner.
+Há **40 testes Node locais aprovados** na mesma bateria: 32 cenários adversariais de fronteira, 3 cenários HTTP loopback, e 5 testes de integração com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
+
+- `PortalPropertyQuery.ts`: `8bd4916731abc776f578c562e77ca54f165ed285`
+- `PortalGardenQuery.ts`: `ee186346b6a621619643e31949a876d2ee490720`
+- `PortalCompanionsQuery.ts`: `d24acca86199cc9f5d94ffa8562fc79da703c479`
+- `PortalReadBundle.ts`: `bf1f3f972401f79339c10721dfebb27bbdaf2b11`
+- `integration/tests/fixture.mjs`: `43d3d8f3b93f408349bfdb3c51af75baa1d153d7`
+- `web/contract-adapter.js`: `c70b2cde80df8542eff7630470091f05a4e088e4`
+
+O comando local executado:
+
+```sh
+CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test scripts/tests/read-boundary*.test.mjs
+```
+
+Resultado TAP: **40 testes, 40 pass, 0 fail**, duração reportada ~692ms. As cinco integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada e estados restritos. O arquivo já entra no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
 ## Barreiras não dispensadas
 
