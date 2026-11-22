@@ -94,8 +94,11 @@ function parseReadRequest(request){
     if(!Array.isArray(raw)||raw.length%2!==0||raw.length>400)return {status:400};
     const critical=new Set(['authorization','cookie','content-length','transfer-encoding']);
     const seen=new Set();
+    let totalBytes=0;
     for(let i=0;i<raw.length;i+=2){
       if(typeof raw[i]!=='string'||typeof raw[i+1]!=='string')return {status:400};
+      totalBytes+=Buffer.byteLength(raw[i],'utf8')+Buffer.byteLength(raw[i+1],'utf8');
+      if(totalBytes>MAX_HEADER)return {status:400};
       const name=raw[i].toLowerCase();
       if(critical.has(name)&&seen.has(name))return {status:400};
       seen.add(name);
