@@ -113,3 +113,14 @@ test('P0 projector is pure and exposes no HTTP server, session or data mutators'
  const m=await import('../../integration/p0/native-projection.mjs');
  assert.deepEqual(Object.keys(m).sort(),['normalizeNativeP0Read','projectInventory','projectProfile']);
 });
+
+test('independently optional talisman flags stay absent rather than becoming false',()=>{
+ const source=inventory();source.hasTalisman=true;
+ const result=projectInventory(source);
+ assert.deepEqual(result.talismans,{kind:'reported',hasTalisman:true});
+ assert.ok(!Object.hasOwn(result.talismans,'hasCloneTalisman'));
+});
+test('all three reported talisman flags retain each boolean independently',()=>{
+ const source=inventory();source.hasTalisman=false;source.hasCloneTalisman=true;source.hasRemoteHarvestTalisman=false;
+ assert.deepEqual(projectInventory(source).talismans,{kind:'reported',hasTalisman:false,hasCloneTalisman:true,hasRemoteHarvestTalisman:false});
+});
