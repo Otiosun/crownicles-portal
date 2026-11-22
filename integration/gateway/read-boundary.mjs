@@ -44,6 +44,20 @@ function getCredential(headers,name){
 }
 function parseReadRequest(request){
   if(!request || typeof request!=='object'||Array.isArray(request)) return {status:400};
+  // Node IncomingMessage may silently discard repeated Authorization headers.
+  // rawHeaders retains them; prevent credential selection by parser behavior.
+  if(request.rawHeaders!==undefined){
+    const raw=request.rawHeaders;
+    if(!Array.isArray(raw)||raw.length%2!==0||raw.length>400)return {status:400};
+    const critical=new Set(['authorization','cookie','content-length','transfer-encoding']);
+    const seen=new Set();
+    for(let i=0;i<raw.length;i+=2){
+      if(typeof raw[i]!=='string'||typeof raw[i+1]!=='string')return {status:400};
+      const name=raw[i].toLowerCase();
+      if(critical.has(name)&&seen.has(name))return {status:400};
+      seen.add(name);
+    }
+  }
   if(typeof request.url!=='string'||request.url.length===0||Buffer.byteLength(request.url,'utf8')>MAX_URL||
      !request.url.startsWith('/')||request.url.startsWith('//')||request.url.includes('#')||
      /[\x00-\x20\x7F]/.test(request.url)) return {status:400};
