@@ -1,9 +1,4 @@
-/**
- * Crownicles Portal UX-P0-003: PURE NAVIGATION / PRIVACY MODEL, LAB ONLY.
- * - No API, browser, Core, auth service, persistent cache, or player data.
- * - Inputs are ALREADY allowlisted snapshots from the authenticated server gateway.
- * - This is not an authoritative game mechanic or a production session manager.
- */
+/** Copy of pinned UX-P0-003 machine, for local validation only. */
 export const P0_CATEGORIES = Object.freeze(['weapon', 'armor', 'potion', 'object']);
 export const P0_DOMAIN_STATES = Object.freeze(['ready', 'not_initialized', 'restricted', 'unavailable']);
 const SECTION_NAMES = new Set(['profile', 'inventory']);
@@ -43,12 +38,6 @@ function stillSame(data,selected){const actual=selected&&itemAt(data,selected.ca
  return actual&&actual.id===selected.id?actual:null;}
 function replaceSection(state,section,patch){return {...state,sections:{...state.sections,[section]:patch}};}
 function clearDetail(state){return {...state,selected:null,detailOrigin:null,view:state.view==='detail'?'inventory':state.view,focusIntent:'inventory-heading'};}
-/**
- * Events: AUTH_ESTABLISHED, AUTH_LOST, GO_PROFILE, GO_INVENTORY, SET_CATEGORY,
- * FETCH_STARTED, FETCH_FINISHED, SELECT_ITEM, OPEN_DETAIL, BACK, LOGOUT.
- * FETCH_FINISHED requires section, epoch, requestId, domain state, and already
- * allowlisted projected data when ready. `unauthorized` indicates HTTP 401.
- */
 export function transition(state,event){
  const e=event??{};
  if(e.type==='AUTH_LOST'||e.type==='LOGOUT')return {...initialState(),epoch:state.epoch+1};
@@ -66,14 +55,18 @@ export function transition(state,event){
   const previous=state.sections[e.section];
   if(previous.requestId!==null&&e.requestId<=previous.requestId)return state;
   let next=replaceSection(state,e.section,{state:'loading',requestId:e.requestId,asOf:null,data:null});
-  if(e.section==='inventory'&&state.view==='detail')next=clearDetail(next);
+  // Hide old detail immediately. Keep only its inert identity through loading;
+  // FETCH_FINISHED revalidates category + slot + ID before restoring selection.
+  if(e.section==='inventory'&&state.view==='detail')next={...next,view:'inventory',detailOrigin:null,focusIntent:'inventory-heading'};
   return next;
  }
  if(e.type==='FETCH_FINISHED'){
   if(!SECTION_NAMES.has(e.section)||e.epoch!==state.epoch)return state;
+  // A 401 is a session-security signal: a same-epoch delayed 401 must revoke
+  // even when a newer request superseded it. An old-epoch 401 was rejected above.
+  if(e.domainState==='unauthorized')return {...initialState(),epoch:state.epoch+1};
   const previous=state.sections[e.section];
   if(previous.state!=='loading'||previous.requestId!==e.requestId)return state;
-  if(e.domainState==='unauthorized')return {...initialState(),epoch:state.epoch+1};
   if(!DOMAIN_STATES.has(e.domainState))return state;
   const valid=e.domainState!=='ready'||safeSnapshot(e.section,e.data);
   const resolved=valid?e.domainState:'unavailable';
