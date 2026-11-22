@@ -161,6 +161,8 @@ A allowlist atual do CP040 tem exatamente `property,chest,garden,pet,pantry`. **
 4. CP012/014 nativos em checkout Core pinado, transação real SELECT-only, gates CP027/Keycloak/CI, nova versão de DTO e testes A/B, stale responses e projeção completa.
 5. Aceite UX em DOM com foco/rolagem/teclado e usuários reais, independente dos testes de gateway.
 
+**Rastreamento:** [Issue #8 — contrato separado CP012/014 Perfil e Inventário](https://github.com/Otiosun/crownicles-portal/issues/8). A fronteira UX foi comunicada também no PR #4, sem modificar os arquivos de estudo visual.
+
 **Decisão de integração:** manter a allowlist CP040 intacta e o PR #6 como candidato isolado; não afirmar cobertura do P0 e não anexar os leitores CP012/014 diretamente sem gate de contratos. Nenhuma UI alterada nesta revisão.
 
 ## Handoff fechado desta sessão
