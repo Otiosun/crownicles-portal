@@ -50,7 +50,7 @@ function talismans(v){
 function plants(v){if(keys(v,['kind'])&&v.kind==='not_reported')return true;
  return keys(v,['kind','plantSlots','maxPlantSlots','linkedToHomeStorage'],['seed'])&&v.kind==='reported'&&
   (!own(v,'seed')||positive(v.seed))&&list(v.plantSlots)&&
-  v.plantSlots.every(s=>keys(s,['plantId','slot'])&&positive(s.plantId)&&natural(s.slot))&&
+  v.plantSlots.every(s=>keys(s,['plantId','slot'])&&positive(s.plantId)&&natural(s.slot)&&s.slot<v.maxPlantSlots)&&
   unique(v.plantSlots,'slot')&&natural(v.maxPlantSlots)&&bool(v.linkedToHomeStorage)}
 function inventory(d){return keys(d,['categories','materials','talismans','plants'])&&
   categories(d.categories)&&materials(d.materials)&&talismans(d.talismans)&&plants(d.plants)}
