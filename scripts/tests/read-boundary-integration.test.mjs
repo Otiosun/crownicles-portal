@@ -52,3 +52,30 @@ test('native restricted states survive projection but do not carry property obje
  assert.deepEqual(r.payload.sections.garden,{state:'restricted'});
  assert.ok(!r.raw.includes('chestItems'));
 });
+
+test('narrow gateway request does not query unrelated native tables',async()=>{
+ const f=fixture();const r=await result(bound(f,A),request(['pet']));
+ assert.equal(r.status,200);assert.deepEqual(Object.keys(r.payload.sections),['pet']);
+ assert.ok(f.calls.some(x=>x.table==='pets'));
+ assert.ok(!f.calls.some(x=>['homes','apartments','slots','garden','storage','seeds','guilds'].includes(x.table)));
+});
+test('a single reusable boundary never retains previously authenticated subject data',async()=>{
+ const f=fixture();let current=A;
+ const handle=createPortalReadBoundary({resolveVerifiedSubject:async()=>current,readSnapshot:({actor,sections})=>read(f,actor,sections)});
+ const first=await result(handle,request(ALL));
+ assert.equal(first.status,200);assert.equal(first.payload.sections.pet.packet.pet.nickname,'Lumi');
+ current=B;
+ const second=await result(handle,request(ALL,A));
+ assert.equal(second.status,200);assert.equal(second.payload.sections.pet.state,'absent');
+ assert.equal(second.payload.sections.chest.data.chestItems[0].details.id,70);
+ assert.ok(!second.raw.includes('Lumi'));
+ assert.ok(!second.raw.includes('Coven'));
+});
+test('a failed snapshot does not poison later successful requests or release earlier partial data',async()=>{
+ const f=fixture();const handle=bound(f,A);
+ f.issues.throwTable='slots';const bad=await result(handle,request(['property','chest']));
+ assert.equal(bad.status,503);assert.deepEqual(bad.payload,{state:'unavailable'});
+ f.issues.throwTable=null;const good=await result(handle,request(['property','chest']));
+ assert.equal(good.status,200);assert.equal(good.payload.sections.chest.data.chestItems[0].details.id,42);
+ assert.ok(!good.raw.includes('DONT_LEAK_DATABASE_ERROR'));
+});
