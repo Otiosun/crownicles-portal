@@ -23,7 +23,7 @@ O PR #1 e o CP040 cobrem \`property,chest,garden,pet,pantry\`, mas o primeiro fl
 node --test scripts/tests/p0-native-projection.test.mjs
 \`\`\`
 
-**19/19 testes Node 22 aprovados**, incluindo limites de slot e quatro categorias, duplicatas, item ID 0, ausência de plantas, campos sensíveis, flags opcionais, sentinelas do perfil e falha fechada. Comparação de duas fixtures CP014 legadas válidas com o projetor anterior: **paridade 2/2** na primeira execução (antes do ajuste dos talismãs); o ajuste preserva nomes CP014 quando todas as três flags estão presentes e não altera as duas fixtures de paridade.
+**22/22 testes Node 22 aprovados**, incluindo limites de slot e quatro categorias, duplicatas, item ID 0, ausência de plantas, campos sensíveis, flags opcionais, sentinelas do perfil e falha fechada. Comparação de duas fixtures CP014 legadas válidas com o projetor anterior: **paridade 2/2** na primeira execução (antes do ajuste dos talismãs); o ajuste preserva nomes CP014 quando todas as três flags estão presentes e não altera as duas fixtures de paridade.
 
 Os pacotes de origem foram recuperados do Drive:
 - **CP012**: ID \`1ksMlpV-p91V4vOtD2u8JCCG_Xymn38go\`; SHA-256 ZIP \`edeff51402b55638818971b4dea75ad894120633d224b9e3c1315958ba11eb1b\`; **71/71 testes** locais de seu próprio laboratório.
