@@ -49,9 +49,11 @@ function talismans(v){
 }
 function plants(v){if(keys(v,['kind'])&&v.kind==='not_reported')return true;
  return keys(v,['kind','plantSlots','maxPlantSlots','linkedToHomeStorage'],['seed'])&&v.kind==='reported'&&
-  (!own(v,'seed')||positive(v.seed))&&list(v.plantSlots)&&
-  v.plantSlots.every(s=>keys(s,['plantId','slot'])&&positive(s.plantId)&&natural(s.slot)&&s.slot<v.maxPlantSlots)&&
-  unique(v.plantSlots,'slot')&&natural(v.maxPlantSlots)&&bool(v.linkedToHomeStorage)}
+  positive(v.maxPlantSlots)&&v.maxPlantSlots<=3&&
+  (!own(v,'seed')||(positive(v.seed)&&v.seed<=10))&&list(v.plantSlots,3)&&
+  v.plantSlots.every(s=>keys(s,['plantId','slot'])&&positive(s.plantId)&&s.plantId<=10&&
+   natural(s.slot)&&s.slot<v.maxPlantSlots)&&unique(v.plantSlots,'slot')&&
+  bool(v.linkedToHomeStorage)}
 function inventory(d){return keys(d,['categories','materials','talismans','plants'])&&
   categories(d.categories)&&materials(d.materials)&&talismans(d.talismans)&&plants(d.plants)}
 function missions(v){return keys(v,['gems','campaignProgression'])&&num(v.gems)&&num(v.campaignProgression)}

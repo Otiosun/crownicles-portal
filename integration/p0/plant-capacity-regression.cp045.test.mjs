@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {isProjectedP0} from './projection-guard.mjs';
+import {normalizeNativeP0Read} from './native-projection.mjs';
+const attrib=()=>({baseValue:1,upgradeValue:0,maxValue:10});
+const m=(category,id=0)=>({id,itemCategory:category,rarity:1,itemLevel:0,attack:attrib(),defense:attrib(),speed:attrib()});
+const s=(category,id=0)=>({id,itemCategory:category,rarity:1,nature:1,power:1,maxPower:10});
+const packet=()=>({foundPlayer:true,data:{weapon:m(0),armor:m(1),potion:s(2),object:s(3),backupWeapons:[],backupArmors:[],backupPotions:[],backupObjects:[],slots:{weapons:1,armors:1,potions:1,objects:1},materials:[],plants:{plantSlots:[{plantId:7,slot:0}],maxPlantSlots:1,linkedToHomeStorage:false}}});
+const projected=p=>normalizeNativeP0Read('inventory',{state:'ready',packet:p});
+test('plant slot=0 with one permitted plant remains valid',()=>{const r=projected(packet());assert.equal(r.state,'ready');assert.equal(isProjectedP0('inventory',r.data),true)});
+test('plant slot exactly at capacity fails closed at native projector',()=>{const p=packet();p.data.plants.plantSlots[0].slot=1;assert.deepEqual(projected(p),{state:'unavailable'})});
+test('plant slot greater than capacity fails closed at native projector',()=>{const p=packet();p.data.plants.plantSlots[0].slot=9000;assert.deepEqual(projected(p),{state:'unavailable'})});
+test('projected plant slot at maxPlantSlots is denied by UX guard',()=>{const r=projected(packet());r.data.plants.plantSlots[0].slot=1;assert.equal(isProjectedP0('inventory',r.data),false)});
+test('CP045 empty reported plant inventory with invalid capacity zero fails closed',()=>{const p=packet();p.data.plants.plantSlots=[];p.data.plants.maxPlantSlots=0;const r=projected(p);assert.deepEqual(r,{state:'unavailable'});});
+test('CP045 independent seed remains valid with minimum positive plant capacity one',()=>{const p=packet();p.data.plants.seed=4;p.data.plants.plantSlots=[];p.data.plants.maxPlantSlots=1;const r=projected(p);assert.equal(r.state,'ready');assert.equal(r.data.plants.seed,4);assert.equal(isProjectedP0('inventory',r.data),true)});
