@@ -41,7 +41,7 @@ Para Node `IncomingMessage`, o adaptador HTTP só deve abortar `request.signal` 
 node --test scripts/tests/read-boundary*.test.mjs
 ```
 
-Há **69 testes Node locais aprovados** na mesma bateria: 39 cenários adversariais de fronteira, 5 cenários HTTP loopback, 9 testes de integração e 16 testes de prazo/cancelamento com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
+Há **75 testes Node locais aprovados** na mesma bateria: 41 cenários adversariais de fronteira, 5 cenários HTTP loopback, 9 testes de integração, 16 testes de prazo/cancelamento e 4 testes de fuzz determinístico com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
 
 - `PortalPropertyQuery.ts`: `8bd4916731abc776f578c562e77ca54f165ed285`
 - `PortalGardenQuery.ts`: `ee186346b6a621619643e31949a876d2ee490720`
@@ -52,7 +52,7 @@ Há **69 testes Node locais aprovados** na mesma bateria: 39 cenários adversari
 
 ### Regressão cruzada com o PR-base
 
-Após a bateria nova de 69 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os seis arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **105/105 PASS, 0 FAIL** (TAP, ~1,73 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
+Após a bateria nova de 75 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os oito arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **111/111 PASS, 0 FAIL** (TAP, ~1,63 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
 
 Hashes das três suítes originais:
 - `combined.test.mjs`: `67390b0a5179c849a217712bf0e2ff74c8587937`
@@ -69,7 +69,7 @@ CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test \
   web/tests/contract.test.cjs
 ```
 
-Resultado TAP: **69 testes novos, 69 pass, 0 fail** (em execução conjunta com 36 herdados, total 105/105). As nove integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os quatro novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
+Resultado TAP: **75 testes novos, 75 pass, 0 fail** (em execução conjunta com 36 herdados, total 111/111). As nove integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os cinco novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
 
 ## Prova adversarial da própria suíte (mutação local, sem commit)
 
@@ -82,13 +82,30 @@ Em diretório temporário isolado, foram injetados **quatro defeitos intencionai
 | Aceitar `actorId` arbitrário enviado pelo browser | **3 testes reprovaram** |
 | Ignorar a seleção de seções e tentar ler todas | **11 testes reprovaram** |
 
-Após restauração do módulo original, a bateria então existente terminou novamente em **87/87 PASS**; o resultado atual ampliado é **105/105 PASS**. Os quatro mutantes foram testados **antes** da adição da proteção de prazos e desconexão. Isso demonstra sensibilidade dos testes a quatro regressões importantes; **não** é cobertura formal completa, fuzzing exaustivo, teste MariaDB ou garantia de segurança em produção.
+Após restauração do módulo original, a bateria então existente terminou novamente em **87/87 PASS**; o resultado atual ampliado é **111/111 PASS**. Os quatro mutantes foram testados **antes** da adição da proteção de prazos e desconexão. Isso demonstra sensibilidade dos testes a quatro regressões importantes; **não** é cobertura formal completa, fuzzing exaustivo, teste MariaDB ou garantia de segurança em produção.
+
+## Codificações ambíguas e teste adversarial determinístico
+
+A entrada agora admite **apenas** a query literal `sections=pet,garden` ou a representação canônica de `URLSearchParams` (`sections=pet%2Cgarden`), com qualquer subconjunto válido de seções não repetidas. Formas como `%73ections=pet`, `sections=pet&`, percent-encoding misto ou separadores redundantes são rejeitadas **antes da autenticação**. O objetivo é reduzir divergências de parsing entre proxies, caches e framework, sem bloquear a codificação produzida por `URLSearchParams`.
+
+A suíte `scripts/tests/read-boundary-fuzz.test.mjs` utiliza semente fixa `0xC0401234` e não depende de serviço externo: **1.400 mutações de bytes de query**, **350 combinações de headers críticos duplicados**, **150 ordens/subconjuntos válidos de seções** e entradas inválidas de `body`/`signal`. É uma bateria determinística de regressão, **não** fuzzing exaustivo, auditoria criptográfica ou prova contra todos os parsers HTTP existentes.
+
+### Mutantes adicionais desta rodada (falhas intencionais, restauradas)
+
+| Mutação temporária (NÃO commitada) | Falhas detectadas pelos testes |
+|---|---:|
+| Desativar exigência de query canônica | 2 |
+| Remover abort do sinal ao esgotar deadline | 3 |
+| Remover rejeição de cabeçalhos críticos duplicados | 4 |
+| Desativar propagação de desconexão externa | 1 |
+
+Em cada caso o módulo original foi **restaurado**. Todos os 111 testes passaram na suíte integrada após as restaurações.
 
 ## Matriz de aceite para a próxima integração
 
 | Gate | Estado em 22/11 | Evidência necessária para avançar |
 |---|---|---|
-| CP040-LAB — contratos de entrada/saída, isolamento via fixtures | **APROVADO LOCALMENTE 105/105** | Fontes versionadas e testes locais reproduzíveis; não é teste de banco real |
+| CP040-LAB — contratos de entrada/saída, isolamento via fixtures | **APROVADO LOCALMENTE 111/111** | Fontes versionadas e testes locais reproduzíveis; não é teste de banco real |
 | CP040-CI — runner executa as etapas `npm run check` | **BLOQUEADO** | Workflow com runner, steps, logs e exit code reais; issue #3 |
 | CP027-DB — MariaDB nativo e leitura SELECT-only | **BLOQUEADO 0/12** | 12/12 testes originais em ambiente descartável, transação repeatable-read e ownership verificados |
 | CP040-CORE — TypeScript integrado no checkout Core fixado | **PENDENTE** | Compilação/typecheck nativos, importação legítima, sem registro de comando ou mutação |
