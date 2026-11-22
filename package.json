@@ -9,6 +9,7 @@
     "test:tools": "node --test scripts/tests/*.test.mjs",
     "test": "npm run test:web && npm run test:integration && npm run test:tools",
     "audit:imports": "node scripts/native-import-audit.mjs",
+    "audit:upstream": "node scripts/upstream-blob-audit.mjs",
     "gate:preflight": "node scripts/gate-preflight.mjs",
     "check": "node --check web/app.js && node --check web/contract-adapter.js && npm run audit:imports && npm test"
   },
