@@ -1,0 +1,175 @@
+# CP040 — fronteira de consulta do Portal (candidato, não implantado)
+
+**22/11/2026 · laboratório · somente leitura · nenhuma rota ligada a servidor**
+
+Incremento isolado, sem alterar Crownicles Core, bot, dados de jogadores, `web/`, `main` ou o PR visual. O módulo `integration/gateway/read-boundary.mjs` constrói uma resposta HTTP de laboratório; **não cria servidor, não implementa Keycloak e não abre banco**. Para virar endpoint, depende de dois componentes confiáveis, ainda não homologados.
+
+## Contratos e autoridade
+
+- Entrada: objeto `{method:'GET',url:'/api/portal/v1/read?sections=pet,garden',headers:{cookie:'...'}}` ou `Headers`. Saída: `{status,headers,body}`, sem escrita.
+- `resolveVerifiedSubject({authorization,cookie},{signal})` precisa verificar assinatura, emissor, audiência, expiração, revogação e sessão do Keycloak **no servidor**. Não é permitido aceitar JWT apenas decodificado, ID de usuário informado pelo cliente ou token de demonstração.
+- `readSnapshot({actor,sections,now,signal})` precisa usar identidade do resolvedor, transação real consistente e somente leitura, credenciais SELECT-only, predicados de propriedade, limites de consulta e tempo. Integrar a `readPortalSectionsForServer` apenas em checkout isolado e após gates apropriados.
+- O sujeito retornado deve ser um UUID sintaticamente válido e **não** pode ser o UUID NIL (`00000000-0000-0000-0000-000000000000`), que seria um sentinela inseguro de sessão ausente.
+- `actor` vem exclusivamente do resolvedor de sessão verificada. Parâmetros/cabeçalhos com `actorId`, `userId`, `guildId`, `homeId`, `cityId` e similares **não conferem autorização** e não são encaminhados ao leitor.
+- Antes de serializar, a resposta passa pelo `normalizeBundle` original em `web/contract-adapter.js`. A projeção copia somente propriedades permitidas e exige exatamente o conjunto de seções requisitado. Isso é **minimização de dados, não prova de propriedade**.
+
+## Respostas previstas
+
+| Condição | Código |
+|---|---:|
+| GET correto, sessão realmente verificada, snapshot íntegro | 200 |
+| Sem cookie/Bearer, credencial inválida ou falha no verificador | 401 |
+| Rota diferente | 404 |
+| Método não GET | 405, `Allow: GET` |
+| Query extra, seção duplicada, body, URL/header ambíguos, Bearer malformado, cookies duplicados/malformados (nomes ASCII válidos e pares `nome=valor`) ou cookie+Bearer simultâneos | 400 |
+| Erro SQL, contrato inválido, seção extra/omissa, resposta excessiva, desconexão sinalizada | 503 |
+
+Em requisições Node HTTP, o adaptador também consulta `IncomingMessage.rawHeaders` para rejeitar cabeçalhos `Authorization`, `Cookie`, `Content-Length` e `Transfer-Encoding` duplicados, pois o Node pode normalizar ou descartar credenciais repetidas silenciosamente. Um teste HTTP loopback reproduz esse comportamento adversarial. A integração futura com outros servidores HTTP deve fornecer informação equivalente ou checar duplicações antes da normalização.
+
+O corpo de falha é sempre `{"state":"unavailable"}`; não contém token, ID, resposta SQL ou dados parciais. Todas as respostas incluem `Cache-Control: private, no-store`, `Vary: Cookie, Authorization`, `X-Content-Type-Options: nosniff` e `Cross-Origin-Resource-Policy: same-origin`, sem CORS permissivo. O teto é **128 KiB após projeção**. Prazos de resposta agora são aplicados às duas etapas (autenticação: **2.500 ms**, leitura: **5.000 ms**, máximo configurável de **30.000 ms** por etapa), mas isso **não** limita consumo de memória, CPU síncrona ou duração real de uma consulta SQL que ignore cancelamento.
+
+## Prazos, cancelamento e desconexão (CP040-LATENCY)
+
+A fábrica aceita `authTimeoutMs` (padrão **2500**) e `readTimeoutMs` (padrão **5000**), inteiros no intervalo de **1 a 30000 ms**. Valores inválidos são rejeitados na construção, sem fallback silencioso. `resolveVerifiedSubject` recebe um segundo argumento com `{signal}`; `readSnapshot` recebe o `signal` junto ao sujeito e às seções. O sinal de cada etapa é abortado ao ultrapassar o prazo ou quando `request.signal` do adaptador HTTP sinaliza a desconexão. Uma falha de autenticação gera 401; timeout de leitura ou desconexão sinalizada produzem 503 sem dados internos.
+
+**Limite explícito da garantia:** `Promise.race` limita apenas o tempo de **resposta**. A operação assíncrona subjacente pode continuar rodando caso ignore o `AbortSignal`. O adaptador SQL de produção deverá executar cancelamento/rollback, configurar `statement_timeout` ou equivalente MariaDB, impor pool/limites de concorrência e confirmar liberação de recursos. Não há prova de cancelamento do MariaDB nesta rodada. Operações síncronas que bloqueiem o event loop tampouco são preemptadas por timers JavaScript.
+
+Para Node `IncomingMessage`, o adaptador HTTP só deve abortar `request.signal` quando a **resposta** fechar antes de `writableEnded` (evento `res.close`); usar `req.close` ingenuamente pode indicar apenas que o corpo da requisição terminou. Um cenário TCP loopback desconecta o cliente durante a leitura e confirma que o sinal chegou ao leitor simulado. Outros cinco cenários verificam abort durante sessão e leitura, não reutilização de dados pendentes e liberação dos listeners. Um teste adicional usa **40 requisições simultâneas de dois sujeitos sintéticos** no mesmo handler para buscar contaminação cruzada.
+
+## Testes reproduzíveis
+
+```sh
+node --test scripts/tests/read-boundary*.test.mjs
+```
+
+Há **80 testes Node locais aprovados** na mesma bateria: 45 cenários adversariais de fronteira, 5 cenários HTTP loopback, 9 testes de integração, 17 testes de prazo/cancelamento e 4 testes de fuzz determinístico com os quatro módulos TypeScript **reais** compilados em execução a partir da fixture do PR #1. A reprodução isolada foi feita com Node 22, TypeScript 5.8.3 e cópias byte a byte dos arquivos do PR-base; hashes Git conferidos:
+
+- `PortalPropertyQuery.ts`: `8bd4916731abc776f578c562e77ca54f165ed285`
+- `PortalGardenQuery.ts`: `ee186346b6a621619643e31949a876d2ee490720`
+- `PortalCompanionsQuery.ts`: `d24acca86199cc9f5d94ffa8562fc79da703c479`
+- `PortalReadBundle.ts`: `bf1f3f972401f79339c10721dfebb27bbdaf2b11`
+- `integration/tests/fixture.mjs`: `43d3d8f3b93f408349bfdb3c51af75baa1d153d7`
+- `web/contract-adapter.js`: `c70b2cde80df8542eff7630470091f05a4e088e4`
+
+### Regressão cruzada com o PR-base
+
+Após a bateria nova de 80 testes, foram reproduzidos também **36 testes pré-existentes** do PR #1, usando cópias com hashes Git originais verificados: `integration/tests/combined.test.mjs` (**15**), `integration/tests/native-projection.test.mjs` (**9**) e `web/tests/contract.test.cjs` (**12**). A execução conjunta, especificando os oito arquivos de teste sem incluir estudos avulsos do laboratório, resultou em **116/116 PASS, 0 FAIL** (TAP, ~1,75 s). Isso fornece evidência de não regressão do contrato antigo contra a nova fronteira, mas não equivale a executar todos os **43** testes web preexistentes nem o `npm run check` completo do PR consolidado.
+
+Hashes das três suítes originais:
+- `combined.test.mjs`: `67390b0a5179c849a217712bf0e2ff74c8587937`
+- `native-projection.test.mjs`: `6661787bb251e340dfe25da8b0742d11fe26fcc9`
+- `contract.test.cjs`: `319b88a3c2868a9c505b4926f2952ed89c73a122`
+
+O comando local executado:
+
+```sh
+CROWNICLES_TYPESCRIPT_MODULE=/CAMINHO/para/typescript node --test \
+  scripts/tests/read-boundary*.test.mjs \
+  integration/tests/combined.test.mjs \
+  integration/tests/native-projection.test.mjs \
+  web/tests/contract.test.cjs
+```
+
+Resultado TAP: **80 testes novos, 80 pass, 0 fail** (em execução conjunta com 36 herdados, total 116/116). As nove integrações exercitam seleção dos cinco módulos, sujeito A vs. B, tentativa de forjar actorId, erro SQL, linha proprietária adulterada, estados restritos, ausência de consultas a tabelas não solicitadas, reutilização sem dados residuais e recuperação de erro sem vazamento. Os cinco novos arquivos de testes já entram no glob existente de `npm run test:tools`. Esses cenários usam **modelos simulados** e `resolveVerifiedSubject` simulado, não Keycloak/MariaDB. A suíte integral `npm run check` dessa branch e o runner GitHub Actions **não** foram aprovados; Actions ainda falha antes de executar etapas.
+
+## Estabilidade de reprodução e auditoria AST do gateway
+
+Após a extração limpa do pacote (116/116), o comando `node scripts/reproduce-cp040.mjs` foi executado **10 vezes consecutivas**, com **10/10 execuções completas aprovadas** (cada repetição passou os mesmos 116 testes; não são 1.160 testes distintos). Uma execução adicional forçou `--test-concurrency=1` e `NODE_OPTIONS=--unhandled-rejections=strict`: **116/116 PASS**. Não houve falha transitória nessas execuções; a amostra é limitada a este host Node 22.
+
+O gateway foi analisado sintaticamente com AST de TypeScript 5.8.3: **0 diagnósticos de parse**, import estático único `node:module`, `require` literal único do projetor `../../web/contract-adapter.js`, exports apenas `createPortalReadBoundary` e `READ_BOUNDARY_POLICY`; nenhuma chamada direta detectada de `fetch`, `eval`, `Function`, `save`, `update`, `delete`, `destroy`, `create`, `findOrCreate`, `bulkCreate` ou `query`. É um **controle estático focalizado, não auditoria formal de todas as formas de I/O ou um sandbox**.
+
+## Porta reproduzível e autenticidade do corpus (CP040-REPRO)
+
+`scripts/reproduce-cp040.mjs` é um **comando de laboratório offline**, sem rede, autenticação ou banco, criado para executar novamente as 8 suítes envolvidas sem confiar em instruções manuais. Ele verifica **9/9 blobs SHA-1 Git** herdados do PR-base, exige Node >=22 e TypeScript **5.8.3**, inicia os testes sob prazo local de 60 segundos e retorna código de erro em qualquer divergência.
+
+```sh
+# Após instalar as dependências de desenvolvimento do repositório:
+node scripts/reproduce-cp040.mjs
+# Em laboratório externo com TypeScript 5.8.3 instalado globalmente:
+CROWNICLES_TYPESCRIPT_MODULE=/caminho/typescript node scripts/reproduce-cp040.mjs
+```
+
+Verificação executada neste host: `CP040_UPSTREAM=9/9`, `CP040_TYPESCRIPT=5.8.3`, **116/116 tests pass**, `CP040_LOCAL_LAB=PASS`. Prova negativa: cópia descartável do `web/contract-adapter.js` foi alterada em um byte e o comando corretamente recusou a execução com `UPSTREAM_BLOB_MISMATCH`. A cópia adulterada foi descartada. Os testes que ele executa usam doubles, não MariaDB nem Keycloak; o comando **não substitui** `npm run check`, CI nem CP027.
+
+## Prova adversarial da própria suíte (mutação local, sem commit)
+
+Em diretório temporário isolado, foram injetados **quatro defeitos intencionais, um por vez**, no módulo CP040, executando-se os testes e restaurando-se integralmente o original após cada variante. Nenhum mutante foi salvo no GitHub:
+
+| Falha intencional | Resultado do conjunto novo |
+|---|---|
+| Desativar verificação de `rawHeaders` duplicados | **3 testes reprovaram** |
+| Desativar detecção de cookies duplicados | **1 teste reprovou** |
+| Aceitar `actorId` arbitrário enviado pelo browser | **3 testes reprovaram** |
+| Ignorar a seleção de seções e tentar ler todas | **11 testes reprovaram** |
+
+Após restauração do módulo original, a bateria então existente terminou novamente em **87/87 PASS**; o resultado atual ampliado é **116/116 PASS**. Os quatro mutantes foram testados **antes** da adição da proteção de prazos e desconexão. Isso demonstra sensibilidade dos testes a quatro regressões importantes; **não** é cobertura formal completa, fuzzing exaustivo, teste MariaDB ou garantia de segurança em produção.
+
+## Sintaxe de cookies e proteção contra sentinelas
+
+Agora o cabeçalho `Cookie` só é aceito como sequência de **pares nome=valor**; tokens opacos sem `=`, entradas sem nome, nomes com espaços/pontuação inválida e separadores vazios retornam 400 antes do verificador. Valores com padding `=`, nomes como `__Host-crownicles-session` e cookies adicionais distintos continuam aceitos. **Isso valida somente a sintaxe:** assinatura, revogação, binding de sessão e atributos Secure/HttpOnly/SameSite continuam obrigações do adaptador Keycloak real, não demonstradas pelos mocks.
+
+## Codificações ambíguas e teste adversarial determinístico
+
+A entrada agora admite **apenas** a query literal `sections=pet,garden` ou a representação canônica de `URLSearchParams` (`sections=pet%2Cgarden`), com qualquer subconjunto válido de seções não repetidas. Formas como `%73ections=pet`, `sections=pet&`, percent-encoding misto ou separadores redundantes são rejeitadas **antes da autenticação**. O objetivo é reduzir divergências de parsing entre proxies, caches e framework, sem bloquear a codificação produzida por `URLSearchParams`.
+
+A suíte `scripts/tests/read-boundary-fuzz.test.mjs` utiliza semente fixa `0xC0401234` e não depende de serviço externo: **1.400 mutações de bytes de query**, **350 combinações de headers críticos duplicados**, **150 ordens/subconjuntos válidos de seções** e entradas inválidas de `body`/`signal`. É uma bateria determinística de regressão, **não** fuzzing exaustivo, auditoria criptográfica ou prova contra todos os parsers HTTP existentes.
+
+### Mutantes adicionais desta rodada (falhas intencionais, restauradas)
+
+| Mutação temporária (NÃO commitada) | Falhas detectadas pelos testes |
+|---|---:|
+| Desativar exigência de query canônica | 2 |
+| Remover abort do sinal ao esgotar deadline | 3 |
+| Remover rejeição de cabeçalhos críticos duplicados | 4 |
+| Desativar propagação de desconexão externa | 1 |
+
+Em cada caso o módulo original foi **restaurado**. Todos os 116 testes passaram na suíte integrada após as restaurações.
+
+## Matriz de aceite para a próxima integração
+
+| Gate | Estado em 22/11 | Evidência necessária para avançar |
+|---|---|---|
+| CP040-LAB — contratos de entrada/saída, isolamento via fixtures | **APROVADO LOCALMENTE 116/116** | Fontes versionadas e testes locais reproduzíveis; não é teste de banco real |
+| CP040-CI — runner executa as etapas `npm run check` | **BLOQUEADO** | Workflow com runner, steps, logs e exit code reais; issue #3 |
+| CP027-DB — MariaDB nativo e leitura SELECT-only | **BLOQUEADO 0/12** | 12/12 testes originais em ambiente descartável, transação repeatable-read e ownership verificados |
+| CP040-CORE — TypeScript integrado no checkout Core fixado | **PENDENTE** | Compilação/typecheck nativos, importação legítima, sem registro de comando ou mutação |
+| CP040-AUTH — sessão OIDC/Keycloak real | **PENDENTE** | Assinatura, emissor, audiência, expiração, revogação, cookies e troca de identidade testados no servidor |
+| CP040-HTTP — transporte HTTPS e abuso operacional | **PENDENTE** | Duplicação de headers também no adaptador real, rate/byte/time budgets, cross-owner end-to-end e logs sanitizados |
+| CP040-RELEASE — revisão técnica e visual | **NÃO AUTORIZADO** | Regressão completa, aprovação de segurança e aceite artístico separados; nunca inferidos dos mocks |
+
+**Sequência recomendada:** resolver infraestrutura de CI e CP027 em paralelo; depois validar a integração Core/Keycloak/HTTPS em ambiente isolado; somente ao final considerar revisão para merge. Não criar novas telas para contornar esses gates nem conectar esta candidata a jogadores reais.
+
+## Barreiras não dispensadas
+
+1. **CP027: 0/12 MariaDB nativo** — executar em ambiente descartável com isolamento entre dois sujeitos, SELECT-only e transação real, além do typecheck nativo do Core.
+2. Keycloak/OIDC real: validação criptográfica, emissor/audiência, expiração, revogação, cookies Secure/HttpOnly/SameSite e resistência a replay.
+3. Prova real de propriedade de personagem, pet, baú, jardim e despensa sob manipulação maliciosa de parâmetros e identidades.
+4. Roteador HTTPS real com limites de corpo, taxa, deadline, cancelamento, logs sanitizados, observabilidade, integração e testes de navegador.
+5. Runner GitHub Actions funcional; revisão do código e aceite independente da direção artística.
+
+**Não conectar ao bot, registrar rota pública, publicar, fazer merge nem considerar a fronteira uma proteção operacional** enquanto faltarem os gates.
+## Fronteira de integração com UX-P0-003 — não confundir Chest e Inventory
+
+**Verificação cruzada em 22/11/2026:** o contrato UX-P0-003 ([fonte no Drive](https://docs.google.com/document/d/1cTLW7lDiALRSF5baqHTTRHZJmmzqNkXS/edit)) especifica a primeira jornada `Personagem → Pertences → Inspeção → Retorno` usando os leitores **CP014 `PortalProfileQuery`** e **CP012 `PortalInventoryQuery`**. O mapa nominal UX-P0-FIELD-MAP-002 ([fonte](https://docs.google.com/document/d/1JlVQZFYtErWtFZ1XSBE_0rvZXRjEkfcM/edit)) confirma que o inventário inclui equipamento ativo, reservas, materiais e plantas. Esses dois contratos **não** estão implementados nem incluídos em `readPortalSectionsForServer` da base do PR #1/CP040.
+
+A allowlist atual do CP040 tem exatamente `property,chest,garden,pet,pantry`. **`chest` é o baú da casa (`PortalPropertyQuery.readChestForPortal`), não o inventário do personagem.** Também não há seção `profile`. Portanto, CP040 **não satisfaz** a entrada Personagem nem a inspeção integral de Pertences. Não renomear `chest` para `inventory`, nem forjar um perfil a partir de `property`, `pet` ou do identificador Keycloak. Não expor o campo `keycloakId` na interface.
+
+**Contrato pendente separado para CP012/014, antes de expandir a allowlist**:
+1. Projeção do perfil com campos nativos e opcionais preservados, sem inventar nome público.
+2. Projeção de inventário que distinga `{category,slot,id}`, incluindo ID 0, reservas, materiais e plantas; catálogo de nomes e imagens ainda precisa de fonte canônica.
+3. Estados específicos `ready/restricted/not_initialized/unavailable` e rastreamento de `epoch`/`requestId` do UX-P0-003, sem confundir proteção da UI com autenticação do servidor.
+4. CP012/014 nativos em checkout Core pinado, transação real SELECT-only, gates CP027/Keycloak/CI, nova versão de DTO e testes A/B, stale responses e projeção completa.
+5. Aceite UX em DOM com foco/rolagem/teclado e usuários reais, independente dos testes de gateway.
+
+**Rastreamento:** [Issue #8 — contrato separado CP012/014 Perfil e Inventário](https://github.com/Otiosun/crownicles-portal/issues/8). A fronteira UX foi comunicada também no PR #4, sem modificar os arquivos de estudo visual.
+
+**Decisão de integração:** manter a allowlist CP040 intacta e o PR #6 como candidato isolado; não afirmar cobertura do P0 e não anexar os leitores CP012/014 diretamente sem gate de contratos. Nenhuma UI alterada nesta revisão.
+
+## Handoff fechado desta sessão
+
+**Ponto de entrada para outra sessão:** abrir [PR #6](https://github.com/Otiosun/crownicles-portal/pull/6), conferir o head e executar `node scripts/reproduce-cp040.mjs` em checkout limpo com Node >=22 e TypeScript 5.8.3. Resultado esperado em 22/11: `CP040_UPSTREAM=9/9` e **116/116 PASS**. Se os arquivos herdados do PR-base mudarem, o reproducer irá bloquear por hash: reavaliar cada mudança conscientemente antes de atualizar o manifesto, em vez de remover a verificação.
+
+**Isolamento verificável:** 8 arquivos **adicionados** relativos à branch base; nenhum arquivo base modificado. Não confundir `integration/gateway/read-boundary.mjs` com endpoint implantado: `resolveVerifiedSubject` e `readSnapshot` são contratos injetados e só existem como doubles nos testes. Não há adaptador MariaDB/Keycloak real.
+
+**Ponto de parada seguro:** CP040-LAB validado; próximos atos de integração dependem de CP027 MariaDB, CI com runner e autorização OIDC/HTTPS real. Não avançar para conexão de jogadores nem liberar UI pelo simples sucesso local. A camada artística/UX continua separada e sem aceite de release.
+
