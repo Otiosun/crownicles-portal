@@ -89,3 +89,55 @@ test('read timeout is isolated per request and does not poison the next read',as
  assert.equal((await handler(req)).status,200);
  assert.equal(n,2);
 });
+test('already disconnected request does not authenticate or access DB',async()=>{
+ let auth=0,reads=0;
+ const controller=new AbortController();controller.abort();
+ const handler=createPortalReadBoundary({
+  resolveVerifiedSubject:async()=>{auth++;return A;},
+  readSnapshot:async()=>{reads++;return success();}
+ });
+ const r=await handler({...req,signal:controller.signal});
+ assert.equal(r.status,503);assert.equal(auth,0);assert.equal(reads,0);
+});
+test('client disconnect during OIDC verification aborts verifier and prevents read',async()=>{
+ const controller=new AbortController();let observed,reads=0;
+ const handler=createPortalReadBoundary({...defaults,authTimeoutMs:300,
+  resolveVerifiedSubject:(_credentials,{signal})=>{observed=signal;return new Promise(()=>{});},
+  readSnapshot:()=>{reads++;return success();}
+ });
+ const pending=handler({...req,signal:controller.signal});
+ await Promise.resolve();await Promise.resolve();
+ controller.abort();
+ const result=await pending;
+ assert.equal(result.status,503);assert.equal(reads,0);
+ assert.equal(observed?.aborted,true);
+});
+test('client disconnect during a slow DB snapshot aborts reader and returns no partial state',async()=>{
+ const controller=new AbortController();let observed;
+ const handler=createPortalReadBoundary({...defaults,readTimeoutMs:300,
+  readSnapshot:({signal})=>{observed=signal;return new Promise(()=>{});}
+ });
+ const pending=handler({...req,signal:controller.signal});
+ for(let i=0;i<10&&!observed;i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.ok(observed);
+ controller.abort();
+ const result=await pending;
+ assert.equal(result.status,503);
+ assert.deepEqual(parse(result),{state:'unavailable'});
+ assert.equal(observed.aborted,true);
+});
+test('malformed request.signal is rejected before touching authenticator',async()=>{
+ let auth=0;
+ const handler=createPortalReadBoundary({...defaults,resolveVerifiedSubject:async()=>{auth++;return A;}});
+ for(const signal of [null,{},'abort',42]){
+  const r=await handler({...req,signal});assert.equal(r.status,400);
+ }
+ assert.equal(auth,0);
+});
+test('an external signal stays reusable and does not become aborted on successful work',async()=>{
+ const controller=new AbortController();
+ const handler=createPortalReadBoundary(defaults);
+ const r=await handler({...req,signal:controller.signal});
+ assert.equal(r.status,200);
+ assert.equal(controller.signal.aborted,false);
+});
