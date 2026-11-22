@@ -14,6 +14,7 @@ const SECTIONS=Object.freeze(['property','chest','garden','pet','pantry']);
 const SECTION_SET=new Set(SECTIONS);
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 const NIL_UUID='00000000-0000-0000-0000-000000000000';
+const COOKIE_NAME=/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const MAX_URL=512;
 const MAX_HEADER=16*1024;
 const MAX_RESPONSE=128*1024;
@@ -140,9 +141,12 @@ function parseReadRequest(request){
     const namesSeen=new Set();
     for(const part of cookie.split(';')){
       const equal=part.indexOf('=');
-      if(equal<0) continue; // opaque laboratory credential; real resolver validates
-      const name=part.slice(0,equal).trim();
-      if(!name||namesSeen.has(name)) return {status:400};
+      // A Cookie header contains cookie-pairs, never a bare opaque token.
+      // The session resolver still verifies cryptographic authenticity.
+      if(equal<=0)return {status:400};
+      const rawName=part.slice(0,equal);
+      const name=rawName.trimStart(); // SP after ';' is allowed.
+      if(!COOKIE_NAME.test(name)||namesSeen.has(name))return {status:400};
       namesSeen.add(name);
     }
   }
