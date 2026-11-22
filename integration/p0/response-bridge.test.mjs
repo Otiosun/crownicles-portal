@@ -4,14 +4,17 @@ import { initialState, transition, canInspect } from '../../lab/ux-p0-003/machin
 import { mapReadResponse, startRead, finishRead } from './response-bridge.mjs';
 
 const asOf = '2026-11-22T19:50:00.000Z';
-const main = id => ({id,itemCategory:0,rarity:1,itemLevel:1,attack:{baseValue:1,upgradeValue:0,maximum:{kind:'value',value:5}},defense:{baseValue:0,upgradeValue:0,maximum:{kind:'value',value:5}},speed:{baseValue:0,upgradeValue:0,maximum:{kind:'unbounded'}}});
+const main = (id,itemCategory=0) => ({id,itemCategory,rarity:1,itemLevel:1,attack:{baseValue:1,upgradeValue:0,maximum:{kind:'value',value:5}},defense:{baseValue:0,upgradeValue:0,maximum:{kind:'value',value:5}},speed:{baseValue:0,upgradeValue:0,maximum:{kind:'unbounded'}}});
+const support = (id,itemCategory) => ({id,itemCategory,rarity:1,nature:1,power:1,maximumPower:{kind:'value',value:2}});
 const inventory = () => ({categories:[
  {category:'weapon',capacity:3,active:main(0),reserves:[{slot:1,display:main(7)},{slot:2,display:main(7)}]},
- {category:'armor',capacity:1,active:{id:0},reserves:[]},
- {category:'potion',capacity:1,active:{id:0},reserves:[]},
- {category:'object',capacity:1,active:{id:0},reserves:[]}
+ {category:'armor',capacity:1,active:main(0,1),reserves:[]},
+ {category:'potion',capacity:1,active:support(0,2),reserves:[]},
+ {category:'object',capacity:1,active:support(0,3),reserves:[]}
 ],materials:[{materialId:5,quantity:1}],talismans:{kind:'not_reported'},plants:{kind:'not_reported'}});
-const profile = () => ({level:12,rank:{rank:-1,unranked:true},effect:{timeLeft:-2000},money:0});
+const profile = () => ({level:12,health:{value:2,max:5},experience:{value:1,max:4},money:0,badges:[],
+ missions:{gems:0,campaignProgression:100},rank:{rank:-1,unranked:true,numberOfPlayers:1,score:0},
+ effect:{timeLeft:-2000,healed:true,effect:'none',hasTimeDisplay:false},kingChallengeTier:0});
 const ready = data => ({status:200,body:{state:'ready',asOf,data}});
 const empty = state => ({status:200,body:{state,asOf}});
 const authorized = () => transition(initialState(),{type:'AUTH_ESTABLISHED'});
