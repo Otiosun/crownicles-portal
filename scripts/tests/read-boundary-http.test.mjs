@@ -17,7 +17,13 @@ async function httpHarness(run){
   }
  });
  const server=http.createServer(async(req,res)=>{
-  const result=await handle(req);
+  const controller=new AbortController();
+  // A server response close before writableEnded indicates the client left.
+  // Do not use IncomingMessage close, which may mean a completed request.
+  res.once('close',()=>{if(!res.writableEnded)controller.abort();});
+  const result=await handle({method:req.method,url:req.url,headers:req.headers,
+   rawHeaders:req.rawHeaders,signal:controller.signal});
+  if(res.destroyed)return; // never write after a client disconnect
   res.writeHead(result.status,result.headers);res.end(result.body);
  });
  server.listen(0,'127.0.0.1');await once(server,'listening');
@@ -71,4 +77,41 @@ test('HTTP duplicate Authorization fields cannot be laundered through Node heade
   });
   assert.equal(r.status,400);assert.deepEqual(JSON.parse(r.body),{state:'unavailable'});assert.equal(seen.length,0);
  });
+});
+
+test('real TCP client disconnect propagates abort to the pending snapshot',async()=>{
+ let onReadStarted,onReadCancelled;
+ const started=new Promise(resolve=>{onReadStarted=resolve;});
+ const cancelled=new Promise(resolve=>{onReadCancelled=resolve;});
+ const handle=createPortalReadBoundary({
+  resolveVerifiedSubject:async()=>A,
+  readSnapshot:({signal})=>{
+   if(signal.aborted)onReadCancelled();
+   else signal.addEventListener('abort',()=>onReadCancelled(),{once:true});
+   onReadStarted();
+   return new Promise(()=>{});
+  }
+ });
+ const server=http.createServer(async(req,res)=>{
+  const controller=new AbortController();
+  res.once('close',()=>{if(!res.writableEnded)controller.abort();});
+  const response=await handle({method:req.method,url:req.url,headers:req.headers,
+   rawHeaders:req.rawHeaders,signal:controller.signal});
+  if(!res.destroyed){res.writeHead(response.status,response.headers);res.end(response.body);}
+ });
+ server.listen(0,'127.0.0.1');await once(server,'listening');
+ const port=server.address().port;
+ const client=http.request({hostname:'127.0.0.1',port,path,method:'GET',headers:{Authorization:'Bearer opaque'}});
+ client.on('error',()=>{});
+ try {
+  client.end();
+  await started;
+  client.destroy();
+  let timer;try {
+   await Promise.race([cancelled,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('NO_DISCONNECT')),700);})]);
+  }finally{clearTimeout(timer);}
+ } finally {
+  client.destroy();
+  await new Promise((resolve,reject)=>server.close(e=>e?reject(e):resolve()));
+ }
 });
