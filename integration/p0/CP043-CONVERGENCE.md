@@ -1,0 +1,37 @@
+# CP043 — convergência do guard de Perfil/Inventário com a projeção CP042
+
+**22/11/2026 · laboratório isolado · sem merge/deploy/API/banco real.**
+
+## Defeito e escopo
+
+A proteção `isProjectedP0('inventory', data)` da ponte UX [PR #10](https://github.com/Otiosun/crownicles-portal/pull/10) recebia DTOs projetados, mas (a) aceitava reserva com `slot >= category.capacity` e (b) rejeitava talismãs `kind:'reported'` contendo apenas uma das três flags booleanas que o pacote nativo declara individualmente opcionais.
+
+A [projeção CP042 PR #11](https://github.com/Otiosun/crownicles-portal/pull/11) preserva cada campo presente sem fabricar as flags ausentes e exige reserva `0 < slot < capacity`. A origem autoritativa pinada é o [Core/Lib](https://github.com/Crownicles/Crownicles/tree/64d08c05f11949029317341735f6f73024f19f9b):
+- `Core/src/core/database/game/models/InventorySlot.ts`, Git blob `fda5fca65f061b9b81097ea7bc96b76e8796b8ec`: `isEquipped()` se `slot===0`.
+- `Core/src/core/database/game/models/InventoryInfo.ts`, Git blob `f21e98ad5bc246fbd4773e7d09f4c7e32edee420`: capacidade por categoria (total, incluindo o equipado).
+- `Lib/src/packets/commands/CommandInventoryPacket.ts`, Git blob `5b1f291a8e9804522ca46703537dd097f51ed781`: `hasTalisman?`, `hasCloneTalisman?` e `hasRemoteHarvestTalisman?` são três opcionais independentes.
+
+## Comportamento implementado
+
+- Cada reserva exige `slot > 0 && slot < category.capacity` (e unicidade por slot); duas reservas podem portar o **mesmo ID de item** se seus slots forem distintos e permitidos. Item ativo ID `0` permanece válido.
+- `talismans.kind='not_reported'` só admite `kind`. `kind='reported'` exige ao menos **uma** flag presente, restringe nomes às três flags canônicas, e verifica booleano em cada flag presente. Ausência não vira `false`.
+- Não são criadas contas, itens, campos, nomes públicos, endpoints, URLs nem regras de jogo. Este guard é defesa secundária de DTO **no cliente** e não substitui autorização SQL/OIDC no servidor.
+
+**Atenção à diferença histórica:** os projetores CP012/014 antigos reprovavam flags parcialmente preenchidas (fail-closed), apesar de o pacote tipado torná-las opcionais. CP043 escolhe alinhar o guard ao contrato de saída **da candidata CP042**, preservando integralmente a aceitação dos DTOs históricos completos. Não afirmar que isto já é uma alteração aprovada para o servidor real.
+
+## Prova red → green (Node 22 local)
+
+1. O `projection-guard.mjs` foi reconstruído **byte a byte**, hash Git original `a4aaa9d58796593c58df4c8512c7ff1f1869cbd1`, conferido contra PR #10.
+2. Um teste diferencial externo importando o projetor CP042 **real** reproduziu 7 falhas em 12 cenários: rejeição de flags parciais e aceitação de posições inválidas. Resultado original: **5/12**.
+3. Com as duas correções aplicadas, os mesmos 12 passaram (**12/12**). Hash Git local/branch corrigida `48ad5cb3a640ba2269ebadb464f6305488d28553`.
+4. A suíte histórica do PR #10 tinha **53 casos** e, após correção de comportamento, 2 fixtures precisaram de atualização: `Guard-03` passou a declarar capacidade 3 para permitir slot 2; a expectativa de rejeição de talismã parcialmente reportado passou a exigir rejeição do estado `reported` sem nenhuma flag.
+5. Foram adicionados **5 testes CP043** à suíte histórica, inclusive **1.200 combinações determinísticas slot/capacidade** e **600 combinações de flags opcionais**, totalizando **58/58 testes do guard** aprovados localmente. A comparação externa com a fonte CP042 executada na mesma bateria soma **70/70**, sem contar aqueles 12 como testes versionados neste PR.
+6. O arquivo original de testes foi conferido pelo blob `31265019210140208352e872af9a512d93739b4a`, e a versão corrigida pelo blob `7909e349fed80cb4176d395663eee4c6e731b476`.
+
+Reprodução da suíte **versionada**: `node --test integration/p0/projection-guard.test.mjs` na branch deste PR. O laboratório externo de 12 casos importa o CP042 do PR #11, por isso não está incluído em uma execução isolada da branch PR #10. A evidencia offline pode ser executada quando ambas as fontes estiverem disponíveis.
+
+## Dependências e decisão de integração
+
+Este PR é criado **sobre a branch do PR #10**, sem modificar a branch do outro trabalhador. Não pode ser mesclado automaticamente em `main`. Ao incorporar CP042 posteriormente, exigir teste diferencial servidor→DTO→guard→máquina UX com autenticação de sessão e versionamento do contrato. A prova de compatibilidade **não** é API pronta nem prova de segurança de dados reais.
+
+**Gates pendentes:** CP027 MariaDB real 0/12; GitHub Actions com job sem etapas/log disponível; Keycloak/OIDC real; Core Node24/pnpm10/TS6 e Sequelize patch pinado; testes UX e autenticação com jogadores. Nenhum deles é liberado por estes testes de Node22.
