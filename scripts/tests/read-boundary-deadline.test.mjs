@@ -165,3 +165,16 @@ test('disconnect after verification but before reading cannot start a new snapsh
  assert.equal(r.status,503);
  assert.equal(reads,0);
 });
+test('late successful OIDC verification after timeout cannot trigger any snapshot',async()=>{
+ let resolveAuth,readCalls=0;
+ const handler=createPortalReadBoundary({...defaults,authTimeoutMs:25,
+  resolveVerifiedSubject:()=>new Promise(resolve=>{resolveAuth=resolve;}),
+  readSnapshot:async()=>{readCalls++;return success();}
+ });
+ const first=await handler(req);
+ assert.equal(first.status,401);
+ resolveAuth(A);
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(readCalls,0);
+ assert.deepEqual(parse(first),{state:'unavailable'});
+});
