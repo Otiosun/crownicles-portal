@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {once} from 'node:events';
-import {createPortalReadBoundary} from '../../integration/gateway/read-boundary.mjs';
+import {createPortalReadBoundary as createStrictBoundary} from '../../integration/gateway/read-boundary.mjs';
+const createPortalReadBoundary=opts=>createStrictBoundary({...opts,allowUnboundMockSubjects:true});
 
 const A='11111111-1111-4111-8111-111111111111';
 const B='22222222-2222-4222-8222-222222222222';

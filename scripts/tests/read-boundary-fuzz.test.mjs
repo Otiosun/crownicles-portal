@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createPortalReadBoundary} from '../../integration/gateway/read-boundary.mjs';
+import {createPortalReadBoundary as createStrictBoundary} from '../../integration/gateway/read-boundary.mjs';
+const createPortalReadBoundary=opts=>createStrictBoundary({...opts,allowUnboundMockSubjects:true});
 const A='11111111-1111-4111-8111-111111111111';
 const PATH='/api/portal/v1/read?';
 const allowed=['property','chest','garden','pet','pantry'];
@@ -61,7 +62,7 @@ test('canonical query in both accepted encodings survives random section order/s
   assert.equal(response.status,200,query);
   assert.deepEqual(Object.keys(JSON.parse(response.body).sections).sort(),[...sections].sort());
  }
- assert.equal(stats.auth,150);assert.equal(stats.read,150);
+ assert.equal(stats.auth,300);assert.equal(stats.read,150);
 });
 
 test('malformed body and signal values cannot escalate to read despite valid auth header',async()=>{

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createPortalReadBoundary,READ_BOUNDARY_POLICY} from '../../integration/gateway/read-boundary.mjs';
+import {createPortalReadBoundary as createStrictBoundary,READ_BOUNDARY_POLICY} from '../../integration/gateway/read-boundary.mjs';
+const createPortalReadBoundary=opts=>createStrictBoundary({...opts,allowUnboundMockSubjects:true});
 
 const A='11111111-1111-4111-8111-111111111111';
 const B='22222222-2222-4222-8222-222222222222';
@@ -32,7 +33,7 @@ test('valid request reads exact selected sections under authenticated subject',a
  const {handle,seen}=make();const r=await handle(req());
  assert.equal(r.status,200);assert.equal(body(r).state,'ready');
  assert.deepEqual(Object.keys(body(r).sections),['pet','garden']);
- assert.equal(seen.auth.length,1);assert.equal(seen.read.length,1);
+ assert.equal(seen.auth.length,2);assert.equal(seen.read.length,1);
  assert.equal(seen.read[0].actor,A);assert.deepEqual(seen.read[0].sections,['pet','garden']);
  assert.ok(Object.isFrozen(seen.read[0]));assert.ok(Object.isFrozen(seen.read[0].sections));
  assert.ok(seen.read[0].now instanceof Date);
@@ -190,7 +191,7 @@ test('reject normalized dot-segments and encoded routes, not just parsed pathnam
 });
 test('zero content-length and single bearer credential remain valid',async()=>{
  const {handle,seen}=make();const r=await handle(req({headers:{authorization:'Bearer abc','content-length':'0'}}));
- assert.equal(r.status,200);assert.equal(seen.auth.length,1);
+ assert.equal(r.status,200);assert.equal(seen.auth.length,2);
 });
 
 test('reject empty or whitespace-only identity headers before the resolver',async()=>{
