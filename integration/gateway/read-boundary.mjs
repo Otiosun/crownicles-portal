@@ -13,6 +13,7 @@ const PATH='/api/portal/v1/read';
 const SECTIONS=Object.freeze(['property','chest','garden','pet','pantry']);
 const SECTION_SET=new Set(SECTIONS);
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
+const NIL_UUID='00000000-0000-0000-0000-000000000000';
 const MAX_URL=512;
 const MAX_HEADER=16*1024;
 const MAX_RESPONSE=128*1024;
@@ -179,7 +180,7 @@ export function createPortalReadBoundary({
     try {
       actor=await withDeadline(signal=>resolveVerifiedSubject(parsed.credentials,Object.freeze({signal})),authTimeoutMs,request.signal);
     }catch{return unavailable(request.signal?.aborted?503:401);}
-    if(typeof actor!=='string'||!UUID.test(actor))return unavailable(401);
+    if(typeof actor!=='string'||!UUID.test(actor)||actor.toLowerCase()===NIL_UUID)return unavailable(401);
     let raw;
     try {
       raw=await withDeadline(signal=>readSnapshot(Object.freeze({actor,sections:parsed.sections,now:new Date(),signal})),readTimeoutMs,request.signal);
