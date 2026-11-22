@@ -25,7 +25,7 @@ test('Guard-02 detail ID0 remains legitimate in every active category',()=>{
  let i=inventory();for(const c of i.categories)assert.equal(c.active.id,0);accepts('inventory',i)
 });
 test('Guard-03 two reserve slots may contain the same item ID',()=>{
- let i=inventory();i.categories[0].reserves.push({slot:2,display:main(1)});accepts('inventory',i)
+ let i=inventory();i.categories[0].capacity=3;i.categories[0].reserves.push({slot:2,display:main(1)});accepts('inventory',i)
 });
 test('Guard-04 negative effect time and rank -1 retain native semantics',()=>{
  let p=profile();p.effect.timeLeft=-999999;p.rank.rank=-1;accepts('profile',p)
@@ -75,7 +75,7 @@ const cases=[
  ['support power malformed','inventory',i=>i.categories[2].active.power='10'],
  ['material bad quantity','inventory',i=>i.materials=[{materialId:1,quantity:0}]],
  ['material duplicated id','inventory',i=>i.materials=[{materialId:1,quantity:1},{materialId:1,quantity:2}]],
- ['talismans absent property','inventory',i=>i.talismans={kind:'reported',expedition:true,clone:false}],
+ ['reported talismans without flags','inventory',i=>i.talismans={kind:'reported'}],
  ['plant unknown vs none mismatch','inventory',i=>i.plants={kind:'not_reported',plantSlots:[]}],
  ['plant duplicated slot','inventory',i=>i.plants={kind:'reported',plantSlots:[{slot:1,plantId:1},{slot:1,plantId:2}],maxPlantSlots:2,linkedToHomeStorage:false}],
  ['seed zero invalid','inventory',i=>i.plants={kind:'reported',seed:0,plantSlots:[],maxPlantSlots:1,linkedToHomeStorage:false}],
@@ -101,4 +101,54 @@ test('Guard deterministic single-field mutations never leak as ready',()=>{
  for(let seed=0;seed<1600;seed++){
   let p=profile();edits[(seed*17+13)%edits.length](p);rejects('profile',p)
  }
+});
+
+test('CP043 all categories reject a reserve at capacity and far outside it',()=>{
+ for(let category=0;category<4;category++){
+  for(const bad of [2,9000]){
+   const i=inventory();const c=i.categories[category];c.capacity=2;
+   c.reserves=[{slot:bad,display:category<2?main(7,category):support(7,category)}];
+   rejects('inventory',i);
+  }
+ }
+});
+test('CP043 independently optional talisman flags never fabricate missing siblings',()=>{
+ for(const key of ['expedition','clone','remoteHarvest']){
+  const i=inventory();i.talismans={kind:'reported',[key]:false};accepts('inventory',i);
+ }
+});
+test('CP043 reported talismans need one valid boolean and exclude extras',()=>{
+ const a=inventory();a.talismans={kind:'reported'};rejects('inventory',a);
+ const b=inventory();b.talismans={kind:'reported',expedition:1};rejects('inventory',b);
+ const c=inventory();c.talismans={kind:'reported',expedition:true,sessionToken:'leak'};rejects('inventory',c);
+});
+test('CP043 1200 seeded slot/capacity mutations follow the native invariant',()=>{
+ let seed=0xC04340EF;const rand=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return seed>>>0};
+ for(let n=0;n<1200;n++){
+  const i=inventory(),cat=rand()%4,capacity=1+rand()%20,slot=rand()%25;
+  const row=i.categories[cat];row.capacity=capacity;
+  row.reserves=[{slot,display:cat<2?main(7,cat):support(7,cat)}];
+  assert.equal(isProjectedP0('inventory',i),slot>0&&slot<capacity,String(n));
+ }
+});
+test('CP043 600 seeded talisman partial reports preserve presence and type',()=>{
+ let seed=0xC043ABCD;const rand=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return seed>>>0};
+ const flags=['expedition','clone','remoteHarvest'];
+ for(let n=0;n<600;n++){
+  const i=inventory();i.talismans={kind:'reported'};
+  for(const k of flags)if(rand()%3!==0)i.talismans[k]=rand()%2===0;
+  assert.equal(isProjectedP0('inventory',i),flags.some(k=>Object.hasOwn(i.talismans,k)),String(n));
+ }
+});
+test('CP043 filled plant slot at maxPlantSlots is never a valid slot',()=>{
+ let i=inventory();i.plants={kind:'reported',maxPlantSlots:2,linkedToHomeStorage:false,plantSlots:[{plantId:3,slot:2}]};
+ rejects('inventory',i);
+});
+test('CP043 huge plant slot is denied even if other fields are valid',()=>{
+ let i=inventory();i.plants={kind:'reported',maxPlantSlots:1,linkedToHomeStorage:false,plantSlots:[{plantId:3,slot:9000}]};
+ rejects('inventory',i);
+});
+test('CP043 zero plant capacity allows independent seed but no filled plant slots',()=>{
+ let i=inventory();i.plants={kind:'reported',seed:4,maxPlantSlots:0,linkedToHomeStorage:false,plantSlots:[]};
+ accepts('inventory',i);
 });

@@ -37,17 +37,20 @@ function categories(v){
  return v.every((c,i)=>keys(c,['category','capacity','active','reserves']) &&
   c.category===names[i]&&positive(c.capacity)&&(i<2?main(c.active,i):support(c.active,i))&&
   list(c.reserves)&&c.reserves.every(r=>keys(r,['slot','display'])&&positive(r.slot)&&
-   (i<2?main(r.display,i):support(r.display,i))&&r.display.id!==0)&&unique(c.reserves,'slot'));
+   r.slot<c.capacity&&(i<2?main(r.display,i):support(r.display,i))&&r.display.id!==0)&&unique(c.reserves,'slot'));
 }
 function materials(v){return list(v)&&v.every(m=>keys(m,['materialId','quantity'])&&
  natural(m.materialId)&&positive(m.quantity))&&unique(v,'materialId')}
-function talismans(v){return (keys(v,['kind'])&&v.kind==='not_reported')||
- (keys(v,['kind','expedition','clone','remoteHarvest'])&&v.kind==='reported'&&
-  bool(v.expedition)&&bool(v.clone)&&bool(v.remoteHarvest))}
+function talismans(v){
+ if(keys(v,['kind'])&&v.kind==='not_reported')return true;
+ const optional=['expedition','clone','remoteHarvest'];
+ return keys(v,['kind'],optional)&&v.kind==='reported'&&
+  optional.some(k=>own(v,k))&&optional.every(k=>!own(v,k)||bool(v[k]));
+}
 function plants(v){if(keys(v,['kind'])&&v.kind==='not_reported')return true;
  return keys(v,['kind','plantSlots','maxPlantSlots','linkedToHomeStorage'],['seed'])&&v.kind==='reported'&&
   (!own(v,'seed')||positive(v.seed))&&list(v.plantSlots)&&
-  v.plantSlots.every(s=>keys(s,['plantId','slot'])&&positive(s.plantId)&&natural(s.slot))&&
+  v.plantSlots.every(s=>keys(s,['plantId','slot'])&&positive(s.plantId)&&natural(s.slot)&&s.slot<v.maxPlantSlots)&&
   unique(v.plantSlots,'slot')&&natural(v.maxPlantSlots)&&bool(v.linkedToHomeStorage)}
 function inventory(d){return keys(d,['categories','materials','talismans','plants'])&&
   categories(d.categories)&&materials(d.materials)&&talismans(d.talismans)&&plants(d.plants)}
