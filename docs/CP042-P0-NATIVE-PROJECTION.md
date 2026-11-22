@@ -20,16 +20,20 @@ O PR #1 e o CP040 cobrem \`property,chest,garden,pet,pantry\`, mas o primeiro fl
 ## Testes reproduzíveis
 
 \`\`\`sh
-node --test scripts/tests/p0-native-projection.test.mjs
+node --test scripts/tests/p0-native*.test.mjs
 \`\`\`
 
-**22/22 testes Node 22 aprovados**, incluindo limites de slot e quatro categorias, duplicatas, item ID 0, ausência de plantas, campos sensíveis, flags opcionais, sentinelas do perfil e falha fechada. Comparação de duas fixtures CP014 legadas válidas com o projetor anterior: **paridade 2/2** na primeira execução (antes do ajuste dos talismãs); o ajuste preserva nomes CP014 quando todas as três flags estão presentes e não altera as duas fixtures de paridade.
+**25/25 testes Node 22 aprovados**, incluindo limites de slot e quatro categorias, duplicatas, item ID 0, ausência de plantas, campos sensíveis, flags opcionais, sentinelas do perfil e falha fechada. Comparação de duas fixtures CP014 legadas válidas com o projetor anterior: **paridade 2/2** na primeira execução (antes do ajuste dos talismãs); o ajuste preserva nomes CP014 quando todas as três flags estão presentes e não altera as duas fixtures de paridade.
 
 Os pacotes de origem foram recuperados do Drive:
 - **CP012**: ID \`1ksMlpV-p91V4vOtD2u8JCCG_Xymn38go\`; SHA-256 ZIP \`edeff51402b55638818971b4dea75ad894120633d224b9e3c1315958ba11eb1b\`; **71/71 testes** locais de seu próprio laboratório.
 - **CP014**: ID \`1dMo8dZVsm9sH-9OH5OMZfSTWr3ZZ4flE\`; SHA-256 ZIP \`f74efef74fb65672a20d7f4d6d12378fd1bbaa4729ce7581e458c58bf0125e43\`; **83/83 testes** locais de seu laboratório.
 - Fonte canônica fixada: \`Crownicles/Crownicles@64d08c05f11949029317341735f6f73024f19f9b\`; \`InventorySlot.ts\` blob SHA \`fda5fca65f061b9b81097ea7bc96b76e8796b8ec\`, \`InventoryInfo.ts\` blob SHA \`f21e98ad5bc246fbd4773e7d09f4c7e32edee420\`, \`InventoryConstants.ts\` blob SHA \`1e4c6b491bac12ce9cbf240ac02996a65c89e967\`.
 - UX field map: https://docs.google.com/document/d/1JlVQZFYtErWtFZ1XSBE_0rvZXRjEkfcM/edit ; UX-P0-003: https://docs.google.com/document/d/1cTLW7lDiALRSF5baqHTTRHZJmmzqNkXS/edit
+
+## QA adversarial adicional
+
+`scripts/tests/p0-native-fuzz.test.mjs` executa **2.000 permutações determinísticas** de slot/capacidade com semente `0xC042BA5E` nas quatro categorias e confirma que apenas `0 < slot < capacity` produz resposta `ready`. Ainda verifica exclusão de campos internos em cada categoria e 120 alternâncias entre dados sintéticos e estado `restricted`, sem retenção de payload anterior. Os três testes são parte dos **25/25** acima, não se somam a eles. A cobertura é sintética; não é fuzzing exaustivo de modelos MariaDB.
 
 ## Gates ainda não cumpridos
 
