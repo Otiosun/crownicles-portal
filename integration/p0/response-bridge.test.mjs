@@ -103,3 +103,55 @@ test('CP041-22 untouched section stays clean, no inventory/chest substitution',(
  const s=finished(authorized(),'profile',profile());assert.equal(s.sections.inventory.state,'idle');
  assert.deepEqual(Object.keys(s.sections),['profile','inventory']);
 });
+
+// CP041 compatibility with UX-P0-008: same-session late revocation is authoritative.
+test('CP041-UX008-A superseded same-epoch 401 revokes even after latest ready',()=>{
+ let s=finished(authorized(),'profile',profile());s=finished(s,'inventory',inventory());
+ let old=begin(s,'inventory',2),newer=begin(old.state,'inventory',3);
+ s=finishRead(newer.state,newer.token,ready(inventory()));
+ assert.equal(s.sections.profile.state,'ready');
+ s=finishRead(s,old.token,{status:401,body:{secret:'NO_COPY'}});
+ assert.equal(s.authorized,false);assert.equal(s.sections.profile.data,null);
+ assert.equal(s.sections.inventory.data,null);assert.equal(s.epoch,2);
+ assert.equal(JSON.stringify(s).includes('NO_COPY'),false);
+});
+test('CP041-UX008-B previous actor epoch 401 cannot revoke a new actor',()=>{
+ let s=finished(authorized(),'inventory',inventory());const old=begin(s,'profile',2);
+ s=transition(old.state,{type:'AUTH_ESTABLISHED'});
+ s=finished(s,'profile',profile());
+ s=finishRead(s,old.token,{status:401,body:{}});
+ assert.equal(s.authorized,true);assert.equal(s.sections.profile.data.level,12);
+ assert.equal(s.epoch,2);
+});
+test('CP041-UX008-C refreshing detail retains inert slot id until original item revalidated',()=>{
+ let s=finished(authorized(),'inventory',inventory());
+ s=transition(s,{type:'GO_INVENTORY'});
+ s=transition(s,{type:'SELECT_ITEM',category:'weapon',slot:1});
+ s=transition(s,{type:'OPEN_DETAIL'});
+ const b=begin(s,'inventory',2);
+ assert.equal(b.state.view,'inventory');assert.equal(b.state.sections.inventory.data,null);
+ assert.equal(canInspect(b.state),false);
+ assert.deepEqual(b.state.selected,{category:'weapon',slot:1,id:7});
+ s=finishRead(b.state,b.token,ready(inventory()));
+ assert.deepEqual(s.selected,{category:'weapon',slot:1,id:7});
+ assert.equal(canInspect(s),true);
+ s=transition(s,{type:'OPEN_DETAIL'});assert.equal(s.view,'detail');
+});
+test('CP041-UX008-D changed item in same slot invalidates preserved inspection',()=>{
+ let s=finished(authorized(),'inventory',inventory());
+ s=transition(s,{type:'GO_INVENTORY'});
+ s=transition(s,{type:'SELECT_ITEM',category:'weapon',slot:1});
+ s=transition(s,{type:'OPEN_DETAIL'});
+ const b=begin(s,'inventory',2),changed=inventory();
+ changed.categories[0].reserves[0].display.id=8;
+ s=finishRead(b.state,b.token,ready(changed));
+ assert.equal(s.selected,null);assert.equal(canInspect(s),false);
+});
+test('CP041-UX008-E stale READY is ignored while newer 401 still wipes session',()=>{
+ let s=finished(authorized(),'inventory',inventory());
+ const old=begin(s,'inventory',2),latest=begin(old.state,'inventory',3);
+ s=finishRead(latest.state,old.token,ready(inventory()));
+ assert.equal(s.sections.inventory.state,'loading');
+ s=finishRead(s,latest.token,{status:401});
+ assert.equal(s.authorized,false);assert.equal(s.sections.inventory.data,null);
+});
