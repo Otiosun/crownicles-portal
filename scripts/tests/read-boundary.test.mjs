@@ -217,3 +217,19 @@ test('distinct cookie names remain valid for the verifier to assess',async()=>{
  const {handle,seen}=make();const r=await handle(req({headers:{cookie:'session=A; prefs=dark'}}));
  assert.equal(r.status,200);assert.equal(seen.auth[0].cookie,'session=A; prefs=dark');
 });
+
+test('rawHeaders rejects repeated Authorization even when Node has silently kept only the first value',async()=>{
+ const {handle,seen}=make();const r=await handle(req({headers:{authorization:'Bearer A'},rawHeaders:['Authorization','Bearer A','aUtHoRiZaTiOn','Bearer B']}));
+ assert.equal(r.status,400);assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
+});
+test('rawHeaders rejects malformed or duplicated framing fields early',async()=>{
+ const {handle,seen}=make();
+ for(const rawHeaders of [['Cookie','a','Cookie','b'],['Content-Length','0','content-length','1'],['Authorization'],['Cookie',3],null]){
+  assert.equal((await handle(req({rawHeaders}))).status,400,JSON.stringify(rawHeaders));
+ }
+ assert.equal(seen.auth.length,0);assert.equal(seen.read.length,0);
+});
+test('single critical raw headers continue through verified subject resolver',async()=>{
+ const {handle,seen}=make();const r=await handle(req({headers:{authorization:'Bearer valid'},rawHeaders:['authorization','Bearer valid','Accept','application/json']}));
+ assert.equal(r.status,200);assert.equal(seen.read.length,1);
+});
