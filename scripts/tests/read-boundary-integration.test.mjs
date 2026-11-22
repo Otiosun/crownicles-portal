@@ -5,7 +5,7 @@ import {createPortalReadBoundary} from '../../integration/gateway/read-boundary.
 
 // Transpiles the four *actual candidate TS files* using fixture.mjs.
 // Only the database, real OIDC verification and HTTP transport are doubled.
-const request=(names=ALL,actorId)=>({method:'GET',url:'/api/portal/v1/read?sections='+names.join(','),headers:{cookie:'opaque'},actorId});
+const request=(names=ALL,actorId)=>({method:'GET',url:'/api/portal/v1/read?sections='+names.join(','),headers:{cookie:'session=opaque'},actorId});
 const bound=(f,subject)=>createPortalReadBoundary({resolveVerifiedSubject:async()=>subject,
  readSnapshot:({actor,sections})=>read(f,actor,sections)});
 const result=async(handler,req)=>{const response=await handler(req);return {status:response.status,payload:JSON.parse(response.body),raw:response.body,headers:response.headers};};
@@ -82,14 +82,14 @@ test('a failed snapshot does not poison later successful requests or release ear
 test('simultaneous A/B requests using one boundary keep response ownership isolated',async()=>{
  const f=fixture();const handler=createPortalReadBoundary({
   resolveVerifiedSubject:async({cookie})=>{
-   await Promise.resolve();return cookie==='A'?A:B;
+   await Promise.resolve();return cookie==='session=A'?A:B;
   },
   readSnapshot:async({actor,sections})=>{
    await Promise.resolve();return read(f,actor,sections);
   }
  });
  const jobs=Array.from({length:40},(_,i)=>({
-  actor:i%2===0?A:B,cookie:i%2===0?'A':'B'
+  actor:i%2===0?A:B,cookie:i%2===0?'session=A':'session=B'
  }));
  const results=await Promise.all(jobs.map(async j=>({
   actor:j.actor,response:await handler({method:'GET',url:'/api/portal/v1/read?sections=chest,pet,pantry',headers:{cookie:j.cookie}})
