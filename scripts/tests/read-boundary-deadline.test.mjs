@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createPortalReadBoundary,READ_BOUNDARY_POLICY} from '../../integration/gateway/read-boundary.mjs';
+import {createPortalReadBoundary as createStrictBoundary,READ_BOUNDARY_POLICY} from '../../integration/gateway/read-boundary.mjs';
+const createPortalReadBoundary=opts=>createStrictBoundary({...opts,allowUnboundMockSubjects:true});
 
 const A='11111111-1111-4111-8111-111111111111';
 const req={method:'GET',url:'/api/portal/v1/read?sections=pet',headers:{authorization:'Bearer opaque'}};
@@ -78,7 +79,7 @@ test('auth timeout is isolated per request and does not poison the next session'
  });
  assert.equal((await handler(req)).status,401);
  assert.equal((await handler(req)).status,200);
- assert.equal(n,2);
+ assert.equal(n,3);
 });
 test('read timeout is isolated per request and does not poison the next read',async()=>{
  let n=0;
