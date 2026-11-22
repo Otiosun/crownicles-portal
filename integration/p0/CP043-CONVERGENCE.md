@@ -25,10 +25,18 @@ A [projeção CP042 PR #11](https://github.com/Otiosun/crownicles-portal/pull/11
 2. Um teste diferencial externo importando o projetor CP042 **real** reproduziu 7 falhas em 12 cenários: rejeição de flags parciais e aceitação de posições inválidas. Resultado original: **5/12**.
 3. Com as duas correções aplicadas, os mesmos 12 passaram (**12/12**). Hash Git local/branch corrigida `48ad5cb3a640ba2269ebadb464f6305488d28553`.
 4. A suíte histórica do PR #10 tinha **53 casos** e, após correção de comportamento, 2 fixtures precisaram de atualização: `Guard-03` passou a declarar capacidade 3 para permitir slot 2; a expectativa de rejeição de talismã parcialmente reportado passou a exigir rejeição do estado `reported` sem nenhuma flag.
-5. Foram adicionados **5 testes CP043** à suíte histórica, inclusive **1.200 combinações determinísticas slot/capacidade** e **600 combinações de flags opcionais**, totalizando **58/58 testes do guard** aprovados localmente. A comparação externa com a fonte CP042 executada na mesma bateria soma **70/70**, sem contar aqueles 12 como testes versionados neste PR.
+5. Foram adicionados **8 testes CP043** à suíte histórica, inclusive **1.200 combinações determinísticas slot/capacidade** e **600 combinações de flags opcionais**, totalizando **61/61 testes do guard** aprovados localmente. A comparação externa com a fonte CP042 executada na mesma bateria soma **79/79** (61 guard + 12 contrato cruzado + 6 plantas), sem contar aqueles 12 como testes versionados neste PR.
 6. O arquivo original de testes foi conferido pelo blob `31265019210140208352e872af9a512d93739b4a`, e a versão corrigida pelo blob `7909e349fed80cb4176d395663eee4c6e731b476`.
 
 Reprodução da suíte **versionada**: `node --test integration/p0/projection-guard.test.mjs` na branch deste PR. O laboratório externo de 12 casos importa o CP042 do PR #11, por isso não está incluído em uma execução isolada da branch PR #10. A evidencia offline pode ser executada quando ambas as fontes estiverem disponíveis.
+
+## Integração ampliada e testes padrão
+
+O `package.json` desta branch agora inclui o script `test:p0` e o acrescenta ao `npm test`, consequentemente ao `npm run check` existente (o workflow `.github/workflows/quality.yml` chama `npm run check`). Isso fecha uma lacuna anterior: a ponte de UX e seus testes não eram descobertos pelo test runner principal. O comando `npm run test:p0` executou **89/89 PASS** localmente (61 do guard e 28 da ponte). O CI GitHub Actions ainda falha antes do runner; nenhuma execução remota foi homologada.
+
+Além do limite de reserva, o guard passou a exigir `plants.plantSlots[].slot < plants.maxPlantSlots`, conforme o modelo fixado `PlayerPlantSlot.initializeSlots` (Git blob `d9c54405d0aa5d69113be9b06204e787b1894c18`, slots de plantas **0..count-1**). A semente ocupa outro `slotType` e permanece possível mesmo com capacidade de plantas zero. **Três testes novos** cobrem limite exato, posição 9000 e semente com capacidade zero. A candidata CP042 do PR #11 também foi corrigida, com **28/28 testes** próprios.
+
+O conjunto local composto das suítes PR #10/12 (89), PR #11 (28) e dos diferenciais cruzados externos (12+6) foi executado conjuntamente e resultou **135/135 PASS**, sem sobreposição de nomes de casos. Isso é QA local de módulos/fixtures, não teste nativo de MariaDB, Core, Keycloak ou navegador real.
 
 ## Dependências e decisão de integração
 
