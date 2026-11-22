@@ -9,7 +9,8 @@ Incremento isolado, sem alterar Crownicles Core, bot, dados de jogadores, `web/`
 - Entrada: objeto `{method:'GET',url:'/api/portal/v1/read?sections=pet,garden',headers:{cookie:'...'}}` ou `Headers`. Saída: `{status,headers,body}`, sem escrita.
 - `resolveVerifiedSubject({authorization,cookie},{signal})` precisa verificar assinatura, emissor, audiência, expiração, revogação e sessão do Keycloak **no servidor**. Não é permitido aceitar JWT apenas decodificado, ID de usuário informado pelo cliente ou token de demonstração.
 - `readSnapshot({actor,sections,now,signal})` precisa usar identidade do resolvedor, transação real consistente e somente leitura, credenciais SELECT-only, predicados de propriedade, limites de consulta e tempo. Integrar a `readPortalSectionsForServer` apenas em checkout isolado e após gates apropriados.
-- O sujeito retornado deve ser um UUID sintaticamente válido e **não** pode ser o UUID NIL (`00000000-0000-0000-0000-000000000000`), que seria um sentinela inseguro de sessão ausente.\n- `actor` vem exclusivamente do resolvedor de sessão verificada. Parâmetros/cabeçalhos com `actorId`, `userId`, `guildId`, `homeId`, `cityId` e similares **não conferem autorização** e não são encaminhados ao leitor.
+- O sujeito retornado deve ser um UUID sintaticamente válido e **não** pode ser o UUID NIL (`00000000-0000-0000-0000-000000000000`), que seria um sentinela inseguro de sessão ausente.
+- `actor` vem exclusivamente do resolvedor de sessão verificada. Parâmetros/cabeçalhos com `actorId`, `userId`, `guildId`, `homeId`, `cityId` e similares **não conferem autorização** e não são encaminhados ao leitor.
 - Antes de serializar, a resposta passa pelo `normalizeBundle` original em `web/contract-adapter.js`. A projeção copia somente propriedades permitidas e exige exatamente o conjunto de seções requisitado. Isso é **minimização de dados, não prova de propriedade**.
 
 ## Respostas previstas
