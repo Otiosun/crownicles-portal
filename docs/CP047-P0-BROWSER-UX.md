@@ -14,13 +14,13 @@ O navegador NÃO cria token, não lê cookie HttpOnly, não recebe `keycloakId`,
 - **Logout 200 HTML**, ou `200 JSON` sem o discriminante exato `signed_out`, antes era apresentado como sessão revogada. Agora confirma somente resposta JSON válida e limitada a 1024 bytes, discriminante exato, e informa claramente quando servidor não confirmou revogação. Mesmo com falha, limpa conteúdo local imediatamente.
 - **GET/stream pendente** e **logout sem resposta** deixavam UI presa. `readWithDeadline` cobre todo fetch+stream em 12s (padrão) e faz `AUTH_LOST`, invalidando epoch e abortando leituras. Logout tem prazo padrão 4s e limpa dados antes de tentar revogar servidor. Testes injetam 100ms, apenas em laboratório.
 - **503 em atualização de Inventário**, com Perfil anteriormente carregado, retinha a outra seção. Agora o fluxo P0 inteiro é apagado após falha de consulta ou sessão incerta; restringir/não inicializado permanecem estados diferenciados quando o HTTP retorna DTO válido.
-- Foco e teclado: retorno de inspeção restaura foco do item original com categoria/slot/ID sem deslocar conteúdo para um item homônimo.
+- Foco e teclado: retorno de inspeção e atualização assíncrona restauram foco do mesmo item por categoria/slot/ID, sem deslocar para item homônimo. Teste RED 45/46 na integração capturou perda de foco e GREEN 46/46 após correção.
 
 ## Evidências e limites
 
 | Camada | Evidência |
 | --- | --- |
-| Chromium real com import ESM | 44/44 verificações automatizadas, incluindo 320,390,430,768,1440px; sem overflow; 401, 503, DTO malformado, tela não autenticada, logout e timeout |
+| Chromium real com import ESM | 46/46 verificações automatizadas, incluindo 320,390,430,768,1440px; sem overflow; 401, 503, DTO malformado, tela não autenticada, logout e timeout |
 | Chromium DOM → ponte de teste Python → Node HTTP loopback CP046 | 14/14 verificações; ledger SQLite original CP014; duas sessões sintéticas A/B, revogação A sem afetar B; logout B revogado por servidor |
 | HTTP browser direto | **NÃO PROVADO**: esta sandbox bloqueia `page.goto` até para `data:`/localhost com `ERR_BLOCKED_BY_ADMINISTRATOR`. Os testes usam `page.set_content` + `data:` ESM e relay de rede fora do navegador. Não afirmar cookies Secure reais, TLS, CORS ou reverse proxy validados |
 | Infraestrutura | MariaDB REAL CP027 **0/12**; Keycloak/OIDC, Core Node24/TS6 e GitHub Actions privado continuam **SEM GATE** |
