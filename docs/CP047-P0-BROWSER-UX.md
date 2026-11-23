@@ -20,7 +20,7 @@ O navegador NÃO cria token, não lê cookie HttpOnly, não recebe `keycloakId`,
 
 | Camada | Evidência |
 | --- | --- |
-| Chromium real com import ESM | 41/41 verificações automatizadas, incluindo 320,390,430,768,1440px; sem overflow; 401, 503, DTO malformado, tela não autenticada, logout e timeout |
+| Chromium real com import ESM | 44/44 verificações automatizadas, incluindo 320,390,430,768,1440px; sem overflow; 401, 503, DTO malformado, tela não autenticada, logout e timeout |
 | Chromium DOM → ponte de teste Python → Node HTTP loopback CP046 | 14/14 verificações; ledger SQLite original CP014; duas sessões sintéticas A/B, revogação A sem afetar B; logout B revogado por servidor |
 | HTTP browser direto | **NÃO PROVADO**: esta sandbox bloqueia `page.goto` até para `data:`/localhost com `ERR_BLOCKED_BY_ADMINISTRATOR`. Os testes usam `page.set_content` + `data:` ESM e relay de rede fora do navegador. Não afirmar cookies Secure reais, TLS, CORS ou reverse proxy validados |
 | Infraestrutura | MariaDB REAL CP027 **0/12**; Keycloak/OIDC, Core Node24/TS6 e GitHub Actions privado continuam **SEM GATE** |
