@@ -10,3 +10,11 @@ test('CP051 same item ID is distinct across categories',()=>{assert.equal(itemNa
 test('CP051 unknown IDs, categories and prototype names return null',()=>{for(const cat of ['weapon','armor','potion','object'])for(const id of [-1,Infinity,NaN,1.5,99999,'7',null,undefined])assert.equal(itemName(cat,id),null);for(const cat of ['toString','__proto__','constructor','chest',null,2])assert.equal(itemName(cat,7),null)});
 test('CP051 names cannot inject markup and remain bounded',()=>{for(const [cat,len] of Object.entries(categories))for(let id=0;id<len;id++){const name=itemName(cat,id);assert.equal(typeof name,'string');assert.ok(name.trim().length>0&&name.length<=72);assert.doesNotMatch(name,/[<>\x00-\x1F\x7F]/)}});
 test('CP051 exact upper limit, never invent beyond native IDs',()=>{for(const [cat,len] of Object.entries(categories)){assert.equal(typeof itemName(cat,len-1),'string');assert.equal(itemName(cat,len),null)}});
+
+test('CP051 arbitrary object/symbol categories are rejected without property-key coercion',()=>{
+  const evil={[Symbol.toPrimitive](){throw Error('UNTRUSTED_ACCESSOR')}}, proxy=new Proxy({}, {get(){throw Error('UNTRUSTED_PROXY')}});
+  assert.equal(itemName(evil,7),null);
+  assert.equal(itemName(proxy,7),null);
+  assert.equal(itemName(Symbol('weapon'),7),null);
+  assert.equal(itemName('weapon',7),'Punhal');
+});

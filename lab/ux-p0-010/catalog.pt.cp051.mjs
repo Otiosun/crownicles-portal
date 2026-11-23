@@ -19,7 +19,7 @@ export const UPSTREAM_PT_CATALOG=Object.freeze({
   entries:Object.values(byCategory).reduce((n,rows)=>n+rows.length,0)
 });
 export function itemName(category,id){
-  if(!Object.hasOwn(cat,category)||!Number.isSafeInteger(id)||id<0)return null;
+  if(typeof category!=='string'||!Object.hasOwn(cat,category)||!Number.isSafeInteger(id)||id<0)return null;
   const items=byCategory[cat[category]];
   return id<items.length?items[id]:null;
 }
