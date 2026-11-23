@@ -12,6 +12,17 @@ const LABELS=Object.freeze({weapon:'Armas',armor:'Armaduras',potion:'Poções',o
 const ESC=Object.freeze({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'});
 const escapeText=value=>String(value).replace(/[&<>"']/g,ch=>ESC[ch]);
 const slotLabel=slot=>slot===0?'Posição ativa':`Reserva ${slot}`;
+/** Strict, read-only ID lookup. An empty query means all local rows; invalid
+ * input must never silently coerce to zero (a valid Crownicles item ID). */
+export function filterInventoryIdRows(rows,raw){
+ if(!Array.isArray(rows)||typeof raw!=='string')throw TypeError('INVENTORY_FILTER_INPUT');
+ const query=raw.trim();
+ if(!query)return {valid:true,query:null,rows:rows.slice()};
+ if(!/^[0-9]{1,15}$/.test(query))return {valid:false,query:null,rows:[]};
+ const id=Number(query);
+ if(!Number.isSafeInteger(id))return {valid:false,query:null,rows:[]};
+ return {valid:true,query:id,rows:rows.filter(row=>row?.display?.id===id)};
+}
 const message=(title,description,action='')=>`<div class="message" role="status"><strong>${escapeText(title)}</strong><p>${escapeText(description)}</p></div>${action?`<div class="actions"><button class="primary" data-action="${action}">Tentar novamente</button></div>`:''}`;
 const statusLabel=(section,state)=>{
   const label=section==='profile'?'seu personagem':'seus pertences';
@@ -33,30 +44,31 @@ function profileView(s){
  out+=`<div class="metrics">${metrics.join('')}</div><p class="muted">Nome público, classe traduzida e imagens não são exibidos sem fonte canônica aprovada.</p><div class="actions"><button class="primary" data-action="inventory">Ver pertences</button><button data-action="refresh">Atualizar personagem</button></div>`;
  return out;
 }
-function inventoryView(s){
+function inventoryView(s,inventoryQuery){
  const q=s.sections.inventory;
  let out='<p class="eyebrow">Consulta / 02</p><h1 id="inventory-heading" tabindex="-1">Pertences</h1><p class="lede">Selecione uma categoria e posição. Inspecionar não altera o jogo.</p>';
  if(q.state!=='ready')return out+statusLabel('inventory',q.state)+'<div class="actions"><button data-action="profile">Voltar ao personagem</button></div>';
  const c=q.data.categories.find(row=>row.category===s.category);
  if(!c)return out+statusLabel('inventory','unavailable');
  out+=`<div class="tabs" role="group" aria-label="Categorias">${P0_CATEGORIES.map(name=>`<button id="category-${name}" data-action="category" data-category="${name}" aria-pressed="${name===s.category}">${escapeText(LABELS[name])}</button>`).join('')}</div>`;
- out+=`<p class="muted">${escapeText(LABELS[s.category])} · capacidade: ${escapeText(c.capacity)} posições (não é quantidade de itens)</p><div class="item-list" role="group" aria-label="Posições do inventário">`;
+ out+=`<p class="muted">${escapeText(LABELS[s.category])} · capacidade: ${escapeText(c.capacity)} posições (não é quantidade de itens)</p>`;
+ out+=`<div class="inventory-search"><label for="inventory-query">Buscar item pelo ID exato</label><input id="inventory-query" type="search" inputmode="numeric" maxlength="15" autocomplete="off" spellcheck="false" placeholder="Ex.: 7" value="${escapeText(inventoryQuery)}"></div><p id="inventory-filter-status" class="muted" role="status" aria-live="polite"></p><p id="inventory-filter-empty" class="muted" hidden>Nenhum item corresponde à busca nesta categoria.</p><div class="item-list" role="group" aria-label="Posições do inventário">`;
  const rows=[{slot:0,display:c.active},...c.reserves].filter(row=>itemAt(q.data,s.category,row.slot));
  for(const row of rows){
   const selected=s.selected?.category===s.category&&s.selected?.slot===row.slot&&s.selected?.id===row.display.id;
-  out+=`<button class="item ${selected?'selected':''}" id="item-${s.category}-${row.slot}" data-action="select" data-category="${s.category}" data-slot="${row.slot}" aria-pressed="${!!selected}"><span><span class="slot">${escapeText(slotLabel(row.slot))}</span><br><span class="itemid">ID ${escapeText(row.display.id)} · sem nome ou arte atribuída</span></span><span aria-hidden="true">${selected?'●':'○'}</span></button>`;
+  out+=`<button class="item ${selected?'selected':''}" id="item-${s.category}-${row.slot}" data-action="select" data-category="${s.category}" data-slot="${row.slot}" data-item-id="${escapeText(row.display.id)}" aria-pressed="${!!selected}"><span><span class="slot">${escapeText(slotLabel(row.slot))}</span><br><span class="itemid">ID ${escapeText(row.display.id)} · sem nome ou arte atribuída</span></span><span aria-hidden="true">${selected?'●':'○'}</span></button>`;
  }
  out+='</div>';
  if(s.selected)out+=`<div class="selection"><strong>Selecionado:</strong> ${escapeText(LABELS[s.selected.category])}, ${escapeText(slotLabel(s.selected.slot))}, ID ${escapeText(s.selected.id)}.<div class="actions"><button class="primary" data-action="inspect" ${canInspect(s)?'':'disabled'}>Inspecionar item</button></div></div>`;
  out+='<div class="actions"><button data-action="profile">Voltar ao personagem</button><button data-action="refresh">Atualizar pertences</button></div>';
  return out;
 }
-function detailView(s){
+function detailView(s,inventoryQuery){
  const q=s.sections.inventory,sel=s.selected;
- if(!sel||q.state!=='ready'||s.view!=='detail')return inventoryView(s);
+ if(!sel||q.state!=='ready'||s.view!=='detail')return inventoryView(s,inventoryQuery);
  const c=q.data.categories.find(x=>x.category===sel.category);
  const display=sel.slot===0?c?.active:c?.reserves.find(x=>x.slot===sel.slot)?.display;
- if(!display||display.id!==sel.id)return inventoryView(s);
+ if(!display||display.id!==sel.id)return inventoryView(s,inventoryQuery);
  const facts=[['Categoria',LABELS[sel.category]],['Posição',slotLabel(sel.slot)],['ID de catálogo',display.id]];
  for(const key of ['attack','defense','speed']){
   const stat=display[key];if(!stat)continue;
@@ -76,7 +88,7 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
  const navigation=documentRef.getElementById('navigation');
  const status=documentRef.getElementById('status');
  if(!content||!navigation||!status)throw TypeError('P0_DOM_CONTAINERS_REQUIRED');
- let checking=false,signingOut=false,announcement='';
+ let checking=false,signingOut=false,announcement='',inventoryQuery='';
  const focusTo=id=>{if(!focus)return;globalThis.requestAnimationFrame?.(()=>documentRef.getElementById(id)?.focus({preventScroll:true}));};
  const reader=createP0BrowserReader({fetcher,onChange:render});
  const link=createP0LinkFlow({fetcher,onChange:()=>render(reader.getState()),onLinked:async()=>{
@@ -100,7 +112,27 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
   const buttons=q.phase==='approved'?'<button class="primary" data-action="link-redeem">Concluir vínculo</button>':'<button class="primary" data-action="link-check">Já confirmei — consultar situação</button>';
   return prefix+code+text+safety+`<div class="actions">${buttons}<button data-action="link-cancel">Cancelar código</button></div></section>`;
  }
+ function applyInventoryFilter(){
+  const input=content.querySelector('#inventory-query');
+  if(!input)return;
+  const buttons=[...content.querySelectorAll('button[data-action="select"]')];
+  const rows=buttons.map(element=>({slot:Number(element.dataset.slot),display:{id:Number(element.dataset.itemId)},element}));
+  const result=filterInventoryIdRows(rows,inventoryQuery);
+  const visible=new Set(result.rows.map(row=>row.element));
+  for(const button of buttons)button.hidden=!visible.has(button);
+  const count=content.querySelector('#inventory-filter-status');
+  if(count)count.textContent=!result.valid?'Digite somente números de ID (até 15 dígitos).':
+   result.query===null?`${buttons.length} itens nesta categoria.`:
+    `${result.rows.length} de ${buttons.length} itens correspondem ao ID ${result.query}.`;
+  const empty=content.querySelector('#inventory-filter-empty');
+  if(empty)empty.hidden=!result.valid||result.rows.length!==0;
+  const selection=content.querySelector('.selection');
+  const selected=reader.getState().selected;
+  if(selection&&selected)selection.hidden=!result.rows.some(row=>
+   row.slot===selected.slot&&row.display.id===selected.id&&selected.category===reader.getState().category);
+ }
  function render(state){
+  if(!state.authorized)inventoryQuery='';
   if(!state.authorized && link.getState().phase==='linked')link.reset({notify:false});
   navigation.innerHTML=state.authorized&&!checking?
    `<button data-action="profile" ${state.view==='profile'?'aria-current="page"':''}>Personagem</button><button data-action="inventory" ${state.view!=='profile'?'aria-current="page"':''}>Pertences</button><button data-action="forget">Encerrar sessão</button>`:
@@ -108,8 +140,9 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
   if(checking){content.innerHTML='<h1 id="login-heading" tabindex="-1">Verificando sessão</h1>'+statusLabel('profile','loading');}
   else if(!state.authorized){
    content.innerHTML=`<p class="eyebrow">Acesso privado</p><h1 id="login-heading" tabindex="-1">Seu personagem</h1><p class="lede">É necessário ter uma sessão vinculada e confirmada no servidor. Esta tela não recebe credenciais nem permite escolher outro jogador.</p><div class="actions"><button class="primary" data-action="verify" ${signingOut?'disabled':''}>Verificar sessão existente</button></div>${linkPanel()}`;
-  }else content.innerHTML=state.view==='detail'?detailView(state):state.view==='inventory'?inventoryView(state):profileView(state);
+  }else content.innerHTML=state.view==='detail'?detailView(state,inventoryQuery):state.view==='inventory'?inventoryView(state,inventoryQuery):profileView(state);
   status.textContent=announcement||(checking?'Verificando a sessão com o servidor.':state.authorized?'Resposta vinculada à sessão do servidor. Nenhum comando de jogo é enviado.':'Nenhuma sessão autenticada confirmada.');
+  applyInventoryFilter();
  }
  async function readWithDeadline(section){
   const epoch=reader.getState().epoch;
@@ -131,7 +164,7 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
  }
  async function verify(){
   if(checking||signingOut)return;
-  checking=true;announcement='';reader.dispatch({type:'AUTH_ESTABLISHED'});
+  checking=true;announcement='';inventoryQuery='';reader.dispatch({type:'AUTH_ESTABLISHED'});
   try{
    await readWithDeadline('profile');
    const current=reader.getState();
@@ -204,6 +237,12 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
   }catch{announcement='Dados locais removidos. Não foi possível confirmar a revogação no servidor.';}
   finally{clearTimeout(timer);cancel.abort();signingOut=false;render(reader.getState());focusTo('login-heading');}
  }
+ const onInput=ev=>{
+  const field=ev.target;
+  if(field?.id!=='inventory-query'||!content.contains(field))return;
+  inventoryQuery=String(field.value).slice(0,15);
+  applyInventoryFilter();
+ };
  const onClick=ev=>{
   const button=ev.target?.closest?.('button[data-action]');
   if(!button||!documentRef.contains(button)||button.disabled)return;
@@ -229,6 +268,7 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
   if(action==='retry'||action==='refresh')void fetchSection(view==='profile'?'profile':'inventory');
  };
  documentRef.addEventListener('click',onClick);
+ documentRef.addEventListener('input',onInput);
  render(reader.getState());
- return Object.freeze({reader,link,verify,forget,destroy:()=>{link.destroy();reader.dispatch({type:'LOGOUT'});documentRef.removeEventListener('click',onClick)}});
+ return Object.freeze({reader,link,verify,forget,destroy:()=>{link.destroy();reader.dispatch({type:'LOGOUT'});documentRef.removeEventListener('click',onClick);documentRef.removeEventListener('input',onInput)}});
 }
