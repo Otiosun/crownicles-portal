@@ -21,7 +21,7 @@ const startRig=async()=>{
  const server=http.createServer((req,res)=>(req.url?.startsWith('/v1/me/')?read:session)(req,res));
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const base='http://127.0.0.1:'+server.address().port;
- const client=()=>{
+ const client=(expectedLevel=12)=>{
   let cookies=new Map(),seen=[],httpHeaders=[];
   const fetcher=async(path,opts={})=>{
    seen.push({path,opts});const headers={...(opts.headers||{})};
@@ -37,7 +37,7 @@ const startRig=async()=>{
   };
   const ownRead=async()=>{
    const r=await fetcher('/v1/me/profile',{method:'GET',headers:{Accept:'application/json'}});
-   if(r.status!==200)return false;const body=await r.json();return body.state==='ready'&&body.data.level===12;
+   if(r.status!==200)return false;const body=await r.json();return body.state==='ready'&&body.data.level===expectedLevel;
   };
   return {fetcher,ownRead,seen,cookies,httpHeaders};
  };
@@ -86,5 +86,41 @@ test('CP048 real CP014 ledger: authority rebind after private approval prevents 
   rig.bindings.set(REF_A,{actor:B,epoch:2});rig.ledger.observeBinding({ref:REF_A,actor:B,epoch:2});
   assert.equal(await flow.redeem(),false);assert.equal(flow.getState().phase,'error');
   assert.equal((await browser.fetcher('/v1/me/profile',{method:'GET'})).status,401);
+ }finally{await rig.close()}
+});
+
+
+test('CP048 two independent private confirmations never mix own-profile sessions',async()=>{
+ const rig=await startRig();try{
+  const a=rig.client(12),b=rig.client(77);
+  const flowA=createP0LinkFlow({fetcher:a.fetcher,onLinked:a.ownRead});
+  const flowB=createP0LinkFlow({fetcher:b.fetcher,onLinked:b.ownRead});
+  await flowA.start();await flowB.start();
+  const ctxB={channel:'private',verified:true,ref:REF_B,actor:B,epoch:1,confirmed:true};
+  const pending=rig.ledger.prepareApproval(flowB.getState().code,ctxB);
+  assert.equal(pending.status,'confirm');
+  assert.equal(rig.ledger.confirmApproval(pending.approvalNonce,ctxB).status,'approved');
+  await approve(rig.ledger,flowA.getState().code);
+  await flowA.check();await flowB.check();
+  assert.equal(await flowA.redeem(),true);assert.equal(await flowB.redeem(),true);
+  assert.equal(await a.ownRead(),true);assert.equal(await b.ownRead(),true);
+  const readA=await a.fetcher('/v1/me/profile',{method:'GET'});
+  const readB=await b.fetcher('/v1/me/profile',{method:'GET'});
+  assert.equal((await readA.json()).data.money,12);
+  assert.equal((await readB.json()).data.money,77);
+  assert.notEqual(a.cookies.get('__Host-crownicles_session'),b.cookies.get('__Host-crownicles_session'));
+ }finally{await rig.close()}
+});
+
+test('CP048 CP014 server rejects untrusted browser-only confirmation and replay',async()=>{
+ const rig=await startRig();try{
+  const browser=rig.client(),flow=createP0LinkFlow({fetcher:browser.fetcher,onLinked:browser.ownRead});
+  await flow.start();assert.equal(await flow.redeem(),false);
+  assert.equal((await browser.fetcher('/v1/link/redeem',{method:'POST'})).status,401);
+  await approve(rig.ledger,flow.getState().code);await flow.check();
+  assert.equal(await flow.redeem(),true);
+  const replay=await browser.fetcher('/v1/link/redeem',{method:'POST'});
+  assert.equal(replay.status,401);
+  assert.equal(await browser.ownRead(),true);
  }finally{await rig.close()}
 });
