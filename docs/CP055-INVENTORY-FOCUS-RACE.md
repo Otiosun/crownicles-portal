@@ -31,7 +31,7 @@ npm run test:p0:https
 ```
 
 **Resultados em reconstrução isolada CP049 R3+CP052 Git source-pinned+CP055:**
-- Teste CP055 determinístico: original **7/14** (RED), correção incompleta **13/14** (RED), versão final **14/14** PASS.
+- Teste CP055 determinístico: original **10/14** (RED), correção incompleta **13/14** (RED), versão final **14/14** PASS.
 - P0 Node original: **202/202** PASS (0 fail, 0 skip).
 - Browser Chromium P0 original: **143/143** PASS em uma bateria completa (as sete suítes).
 - HTTPS/CP049 Node: **12/12**, Python CookieJar **4/4**, sem mudança de arquivos TLS.
