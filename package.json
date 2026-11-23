@@ -8,6 +8,7 @@
     "test:integration": "node --test integration/tests/combined.test.mjs integration/tests/native-projection.test.mjs",
     "test:p0": "node scripts/run-p0-tests.mjs",
     "test:p0:https": "node scripts/run-p0-https-tests.cp049.mjs",
+    "test:p0:preview": "node --test scripts/test-p0-https-preview.cp053.mjs",
     "test:p0:browser": "python lab/ux-p0-010/test_preview.py && python lab/ux-p0-010/accessibility-smoke.cp047.py && python lab/ux-p0-010/test_http_bridge.py && python lab/ux-p0-010/test_link_browser.cp048.py && python lab/ux-p0-010/test_inventory_search.cp050.py && python lab/ux-p0-010/test_catalog.cp051.py && python lab/ux-p0-010/test_catalog_search_journey.cp052.py",
     "test:tools": "node --test scripts/tests/*.test.mjs",
     "test": "npm run test:web && npm run test:integration && npm run test:tools && npm run test:p0",
