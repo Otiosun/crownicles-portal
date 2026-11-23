@@ -144,7 +144,7 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
  const status=documentRef.getElementById('status');
  if(!content||!navigation||!status)throw TypeError('P0_DOM_CONTAINERS_REQUIRED');
  let checking=false,signingOut=false,announcement='',inventoryQuery='';
- const focusTo=id=>{if(!focus)return;globalThis.requestAnimationFrame?.(()=>documentRef.getElementById(id)?.focus({preventScroll:true}));};
+ const focusTo=id=>{if(!focus)return;documentRef.getElementById(id)?.focus({preventScroll:true});};
  const reader=createP0BrowserReader({fetcher,onChange:render});
  const link=createP0LinkFlow({fetcher,onChange:()=>render(reader.getState()),onLinked:async()=>{
   await verify();const s=reader.getState();
