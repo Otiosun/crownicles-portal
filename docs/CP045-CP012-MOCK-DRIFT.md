@@ -32,3 +32,17 @@ CROWNICLES_TYPESCRIPT_MODULE=/caminho/typescript NODE_OPTIONS=--unhandled-reject
 ```
 
 Este documento evita que o checkpoint CP012 antigo seja citado como **prova do limite de sete slots** ou de autorização real. A projeção/guarda CP045 usa os limites 1..3 e permanece candidata. A auditoria **não** altera Core upstream, bot/WhatsApp, PRs CP012/014 históricos ou MariaDB. CP027 e CI privado continuam bloqueados.
+
+## R2 — consulta CP012 transpILADA → projetor CP045 → guard UX
+
+O patch de teste foi ampliado sem tocar o ZIP histórico CP012: acrescentamos F04–F06, que executam `readExistingInventoryForPortal` do candidato TS transformado sob mocks de ORM, e entregam o resultado diretamente a **módulos reais da árvore PR #15** (Git blob `83df9fbf82c4c381a620a4ca4244631f3eab5db8` e `c73829014d159341d7fd7ace6860dd392be6c92e`).
+
+- **F04:** os dois atores sintéticos A/B geram DTOs `ready` aceitos pelo guard, com item próprio distinto; identidade privada não chega à saída.
+- **F05:** três regras de vínculo são aplicadas também ao fluxo gerado pelo candidato, com `maxPlantSlots=1` + jardim mostrando vínculo `false`, sem inventar casa.
+- **F06:** um candidato sob fixture impossível de quatro espaços é rejeitado no projetor CP045 com `{state:'unavailable'}`.
+
+A suíte expandida ficou em **77/77 PASS (71 originais CP012 + 6 casos F01–F06)**, zero skips, Node22/TS5.8/strict. É um ensaio integrado de **código candidato transpilado** com ORM simulado; não executa DB MariaDB, Sequelize real, transação SQL, autenticação, HTTPS real ou o Core Node24/TS6.
+
+**Pacote privado R2 reproduzível:** [Drive — CP045 CP012 native→P0](https://drive.google.com/file/d/1ximeBG8JQpttXNa7KfmPCJltsHInKPpd/view?usp=drivesdk), ZIP **42.622 bytes**, SHA-256 `d3d4fb975570a441b38f7a08dab08694fc5c5740c9c9160b82ae9436e95f3678`. Contém ZIP original CP012, patch único, os dois arquivos CP045 imutáveis, TAP e README, manifesto **6/6 verificado**. Extração limpa, aplicação do patch e **77/77 reexecutados** com os módulos originais conferidos pelos blobs Git exatos. O R1 de 74 testes fica arquivado para rastrear a evolução; usar o R2 como evidência vigente.
+
+**Não somar 77 aos 171 testes da composição como se fossem 248 testes independentes de banco**: compartilham conceitos, fixtures e projetores, e ambos seguem pré-gate.
