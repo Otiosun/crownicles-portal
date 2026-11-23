@@ -52,7 +52,13 @@ export function inspectLabEvidence(stage,output){
   return Object.freeze({stage,count:summaries.tests+4});
  }
  let sum=0;
- for(const [prefix,min] of browserMarkers){
+ // When the integration branch adds CP054, npm echoes its invoked browser script.
+ // An eighth suite must not disappear while the seven older markers are green.
+ const cp054Script='test_item_inspection.cp054.py';
+ const cp054Label='CP054 BROWSER';
+ const cp054Expected=output.includes(cp054Script)||new RegExp('^'+esc(cp054Label)+'\\s+','m').test(output);
+ const requiredMarkers=cp054Expected?[...browserMarkers,[cp054Label,104]]:browserMarkers;
+ for(const [prefix,min] of requiredMarkers){
   const rx=new RegExp('^'+esc(prefix)+'\\s+([0-9]+)\\s*\\/\\s*([0-9]+)\\s*$','gm');
   const found=[...output.matchAll(rx)];
   if(found.length!==1)bad('CP053_BROWSER_MARKER_MISSING_OR_DUPLICATE:'+prefix);
