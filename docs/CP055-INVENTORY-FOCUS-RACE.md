@@ -25,6 +25,7 @@ Na árvore da PR CP055, com Chromium e Playwright instalados:
 
 ```sh
 python lab/ux-p0-010/test_focus_race.cp055.py
+python lab/ux-p0-010/test_focus_multiview.cp055.py
 npm run test:p0
 npm run test:p0:browser
 npm run test:p0:https
@@ -34,6 +35,7 @@ npm run test:p0:https
 - Teste CP055 determinístico: original **10/14** (RED), correção incompleta **13/14** (RED), versão final **14/14** PASS.
 - P0 Node original: **202/202** PASS (0 fail, 0 skip).
 - Browser Chromium P0 original: **143/143** PASS em uma bateria completa (as sete suítes).
+- Multi-viewport Chromium focal CP055: **40/40 PASS** em 320/390/430/768/1440 px, com movimento padrão e reduzido; tanto sobre CP052+CP055 quanto sobre composição CP054+CP055, incluindo foco, limpeza de busca, linhas e ausência de overflow.
 - HTTPS/CP049 Node: **12/12**, Python CookieJar **4/4**, sem mudança de arquivos TLS.
 - Stress simples CP050 (última busca limpa sem salto de foco): após versão final, **35/35** PASS. Stress adicional solicitado de 120 repetições foi **INTERROMPIDO** por limite externo após registrar **81/81** PASS; 39 execuções restantes **NÃO** foram feitas e não contam como aprovação.
 - Os arquivos `controller.mjs` e `test_focus_race.cp055.py` foram comparados com blobs Git exatos no PR; integração real com CP054 e com ART01 não é afirmada.
