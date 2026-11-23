@@ -37,6 +37,7 @@ STUB=r'''async controllerUrl => {
    if(window.__mode==='logoutFail') throw Error('network loss');
    if(window.__mode==='logoutHung')return new Promise(()=>{});
    if(window.__mode==='logoutHtml')return new Response('<html>maintenance</html>',{status:200,headers:{'content-type':'text/html'}});
+   if(window.__mode==='logoutOversize')return new Response('X'.repeat(2048),{status:200,headers:{'content-type':'application/json'}});
    return new Response(JSON.stringify({status:'signed_out'}),{status:200,headers:{'content-type':'application/json'}});
   }
   if(window.__mode==='unauthorized')return new Response('',{status:401});
@@ -112,12 +113,20 @@ if __name__ == "__main__":
    page=setup(browser,'down');click(page,'verify')
    page.wait_for_function("!window.__ui.reader.getState().authorized && document.getElementById('status').textContent.includes('Não foi possível confirmar')")
    ck('503 cannot claim an authenticated session',page.locator('button[data-action="inventory"]').count()==0 and page.locator('#login-heading').count()==1)
+   page.evaluate("window.__mode='normal'");click(page,'verify');ready(page,'profile')
+   ck('Retry after temporary 503 can restore verified session',page.locator('.metric').count()==4)
    page.close()
    # A 200 HTML logout page is not proof that the session was revoked.
    page=setup(browser,'normal');click(page,'verify');ready(page,'profile')
    page.evaluate("window.__mode='logoutHtml'");click(page,'forget')
    page.wait_for_function("document.getElementById('status').textContent.includes('não confirmou')")
    ck('Logout HTTP 200 without signed_out cannot claim revocation', 'Sessão encerrada pelo servidor' not in page.locator('#status').inner_text())
+   page.close()
+   # Logout must reject oversized JSON even with HTTP 200 and JSON MIME.
+   page=setup(browser,'normal');click(page,'verify');ready(page,'profile')
+   page.evaluate("window.__mode='logoutOversize'");click(page,'forget')
+   page.wait_for_function("document.getElementById('status').textContent.includes('não confirmou')")
+   ck('Oversized logout confirmation is rejected',page.locator('.metric').count()==0 and 'Sessão encerrada pelo servidor' not in page.locator('#status').inner_text())
    page.close()
    # Bad DTO: still authorized, but never shows secret.
    page=setup(browser,'bad');click(page,'verify')
@@ -137,6 +146,9 @@ if __name__ == "__main__":
    page.wait_for_function("!window.__ui.reader.getState().authorized && document.getElementById('status').textContent.includes('excedeu')",timeout=3000)
    ck('Hung verification times out and returns to login',page.locator('button[data-action="verify"]').count()==1)
    ck('Hung verification leaves no private data',page.evaluate("window.__ui.reader.getState().sections.profile.data===null"))
+   page.evaluate('''() => window.__resolveHung(new Response(JSON.stringify({state:'ready',asOf:'2026-11-23T04:00:00.000Z',data:window.__fixture.profile(999)}),{status:200,headers:{'content-type':'application/json'}}))''')
+   page.wait_for_timeout(150)
+   ck('Late response after timeout cannot restore stale actor data',page.evaluate("!window.__ui.reader.getState().authorized && window.__ui.reader.getState().sections.profile.data===null") and page.locator('.metric').count()==0)
    page.close()
    # Timeout during Inventory refresh must clear previously loaded Profile AND Inventory.
    page=setup(browser,'normal');click(page,'verify');ready(page,'profile');click(page,'inventory');ready(page,'inventory')
