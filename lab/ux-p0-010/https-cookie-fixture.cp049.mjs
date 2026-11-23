@@ -4,10 +4,16 @@
  * IDs, authority and pepper are fictional; no production databases.
  */
 import {readFileSync} from 'node:fs';
+import {dirname,resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {IdentityLedger} from '../cp014/identity.mjs';
 import {createCP049HttpsLab} from './https-loopback.cp049.mjs';
 import {createInterface} from 'node:readline';
 const key=readFileSync(process.argv[2]),cert=readFileSync(process.argv[3]);
+// CP053 opt-in: the original HTTPS-only allowlist, never a generic static server.
+// Unset by default to preserve CP049 CookieJar and API-only test behavior.
+const publicAssetsRoot=process.env.CROWNICLES_P0_LAB_STATIC==='1'
+ ? resolve(dirname(fileURLToPath(import.meta.url)),'../..'):undefined;
 const A='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',B='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const ref={a:'a'.repeat(64),b:'b'.repeat(64)},ids={a:A,b:B};
 const ledger=new IdentityLedger({pepper:Buffer.alloc(32,0x51)});
@@ -24,8 +30,13 @@ const readNativeOwn=async({actorId,section})=>({actorId,state:'ready',packet:sec
  backupWeapons:[],backupArmors:[],backupPotions:[],backupObjects:[],slots:{weapons:1,armors:1,potions:1,objects:1},materials:[],
  plants:{maxPlantSlots:1,plantSlots:[],linkedToHomeStorage:false}}}});
 const server=createCP049HttpsLab({tls:{key,cert},ledger,authority:{readBinding:async r=>bindings.get(r)??null},
- rateScopeFor:async req=>{const user=req.headers['x-fixture-user'];return user==='b'?ref.b:ref.a},readNativeOwn});
-server.listen(0,'127.0.0.1',()=>console.log(JSON.stringify({ready:true,port:server.address().port})));
+ rateScopeFor:async req=>{const user=req.headers['x-fixture-user'];return user==='b'?ref.b:ref.a},readNativeOwn,publicAssetsRoot});
+server.listen(0,'127.0.0.1',()=>{
+ const port=server.address().port;
+ console.log(JSON.stringify({ready:true,port,...(publicAssetsRoot?{
+  previewUrl:`https://127.0.0.1:${port}/lab/ux-p0-010/preview.html`
+ }:{})}));
+});
 const input=createInterface({input:process.stdin,crlfDelay:Infinity});
 for await(const line of input){
  try{
