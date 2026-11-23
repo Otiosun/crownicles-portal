@@ -1,3 +1,5 @@
+> CP045 COMPOSIÇÃO: os testes históricos que aceitavam maxPlantSlots=0 foram corrigidos na branch CP045; a fonte canônica usa capacidade 1..3. Não somar testes de artefatos distintos como prova de Core/MariaDB real. Ver docs/CP045-CONVERGENCE.md.
+
 # CP043 — convergência do guard de Perfil/Inventário com a projeção CP042
 
 **22/11/2026 · laboratório isolado · sem merge/deploy/API/banco real.**

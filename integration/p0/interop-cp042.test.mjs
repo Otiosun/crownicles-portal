@@ -42,10 +42,12 @@ if(!available){
   p.data.plants.plantSlots[0].slot=1;const out=project(p);out.data.plants.plantSlots[0].slot=2;
   assert.equal(isProjectedP0('inventory',out.data),false);
  });
- test('CP043-INTEROP zero plant capacity with independent seed remains valid',()=>{
+ test('CP045-INTEROP zero plant capacity is rejected by native projection and client guard',()=>{
   const p=fixture();p.data.plants.maxPlantSlots=0;p.data.plants.plantSlots=[];
-  const out=project(p);assert.equal(out.state,'ready');assert.equal(out.data.plants.seed,5);
-  assert.equal(isProjectedP0('inventory',out.data),true);
+  const out=project(p);assert.deepEqual(out,{state:'unavailable'});
+  p.data.plants.maxPlantSlots=1;const ready=project(p);
+  ready.data.plants.maxPlantSlots=0;
+  assert.equal(isProjectedP0('inventory',ready.data),false);
  });
  test('CP043-INTEROP no private owner or session identifiers leak through projected data',()=>{
   const p=fixture();p.keycloakId='PRIVATE_ACTOR';p.data.weapon.ownerId='PRIVATE_OWNER';

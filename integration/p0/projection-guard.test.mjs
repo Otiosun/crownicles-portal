@@ -148,7 +148,7 @@ test('CP043 huge plant slot is denied even if other fields are valid',()=>{
  let i=inventory();i.plants={kind:'reported',maxPlantSlots:1,linkedToHomeStorage:false,plantSlots:[{plantId:3,slot:9000}]};
  rejects('inventory',i);
 });
-test('CP043 zero plant capacity allows independent seed but no filled plant slots',()=>{
+test('CP045 zero plant capacity is not a valid reported inventory under the native schema',()=>{
  let i=inventory();i.plants={kind:'reported',seed:4,maxPlantSlots:0,linkedToHomeStorage:false,plantSlots:[]};
- accepts('inventory',i);
+ rejects('inventory',i);
 });
