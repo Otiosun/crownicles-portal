@@ -49,6 +49,39 @@ with sync_playwright() as p:
         ck('Category switch retains explicit query', page.locator('#inventory-query').input_value() == '70')
         page.locator('#inventory-query').fill('')
         ck('Clearing search restores current category', visible(page).count() >= 1 and page.locator('#inventory-filter-empty:visible').count() == 0)
+        # CP055: deterministically delay the category focus animation frame until
+        # AFTER Playwright focuses/edits the freshly rendered search input.
+        # The unpatched controller steals focus from this new input in the
+        # delayed callback, reproducing the intermittent CP050 fill('') race.
+        page.locator('#inventory-query').fill('70')
+        page.evaluate("""() => {
+            const previous=window.requestAnimationFrame;
+            window.__cp055FocusFrames=[];
+            window.requestAnimationFrame=callback => window.__cp055FocusFrames.push(callback);
+            try { document.getElementById('category-weapon').click(); }
+            finally { window.requestAnimationFrame=previous; }
+        }""")
+        ck('CP055 category click queued exactly one focus intent',
+           page.evaluate('window.__cp055FocusFrames.length') == 1)
+        page.locator('#inventory-query').fill('')
+        page.evaluate('() => window.__cp055FocusFrames.splice(0).forEach(cb => cb(performance.now()))')
+        ck('CP055 stale focus cannot steal search after a later fill',
+           page.evaluate("document.activeElement?.id==='inventory-query'") and
+           page.locator('#inventory-query').input_value() == '')
+        ck('CP055 clear displays original inventory rather than old ID70',
+           visible(page).count() == 3 and
+           page.locator('#inventory-filter-empty:visible').count() == 0)
+        # Pending navigation focus still works when no newer user focus exists.
+        page.evaluate("""() => {
+            const previous=window.requestAnimationFrame;
+            window.__cp055FocusFrames=[];
+            window.requestAnimationFrame=callback => window.__cp055FocusFrames.push(callback);
+            try { document.getElementById('category-weapon').click(); }
+            finally { window.requestAnimationFrame=previous; }
+        }""")
+        page.evaluate('() => window.__cp055FocusFrames.splice(0).forEach(cb => cb(performance.now()))')
+        ck('CP055 navigation focuses category when there was no later interaction',
+           page.evaluate("document.activeElement?.id==='category-weapon'"))
         lab.click(page, 'forget')
         page.wait_for_function('!window.__ui.reader.getState().authorized', timeout=2500)
         ck('Logout removes private search interface', page.locator('#inventory-query').count() == 0)
