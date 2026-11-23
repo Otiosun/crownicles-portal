@@ -108,7 +108,20 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
  const status=documentRef.getElementById('status');
  if(!content||!navigation||!status)throw TypeError('P0_DOM_CONTAINERS_REQUIRED');
  let checking=false,signingOut=false,announcement='',inventoryQuery='';
- const focusTo=id=>{if(!focus)return;globalThis.requestAnimationFrame?.(()=>documentRef.getElementById(id)?.focus({preventScroll:true}));};
+ // A focus request is advisory once a new live control receives user focus.
+ // Category clicks redraw the search input before the next animation frame;
+ // a pending frame must not steal focus from a subsequent search edit.
+ let focusRequestId=0;
+ const focusTo=id=>{
+  if(!focus)return;
+  const requestId=++focusRequestId;
+  globalThis.requestAnimationFrame?.(()=>{
+   if(requestId!==focusRequestId)return;
+   const active=documentRef.activeElement;
+   if(active&&active!==documentRef.body&&active.isConnected&&active.id!==id)return;
+   documentRef.getElementById(id)?.focus({preventScroll:true});
+  });
+ };
  const reader=createP0BrowserReader({fetcher,onChange:render});
  const link=createP0LinkFlow({fetcher,onChange:()=>render(reader.getState()),onLinked:async()=>{
   await verify();const s=reader.getState();
