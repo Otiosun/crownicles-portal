@@ -70,7 +70,7 @@ export function runLabGate({cwd=ROOT,execute=spawnSync,report=console.log,platfo
  for(const stage of stages){
   const bin=platform==='win32'?'npm.cmd':'npm';
   const response=execute(bin,['run',stage.script],{
-   cwd,encoding:'utf8',maxBuffer:32*1024*1024,timeout:TIMEOUTS[stage.name],
+   cwd,encoding:'utf8',shell:platform==='win32',maxBuffer:32*1024*1024,timeout:TIMEOUTS[stage.name],
    env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}
   });
   if(response?.error)bad(`CP053_${stage.name}_SPAWN:${response.error.code??'UNKNOWN'}`);
