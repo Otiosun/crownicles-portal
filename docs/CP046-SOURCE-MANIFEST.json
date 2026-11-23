@@ -1,0 +1,17 @@
+{
+  "version": "CP046 P0 HTTP candidate v1",
+  "cp014OriginalZipSHA256": "f74efef74fb65672a20d7f4d6d12378fd1bbaa4729ce7581e458c58bf0125e43",
+  "sourceSha256": {
+    "integration/p0/secure-native-read.cp046.mjs": "da56ecbad54f5bf2b4505ef79a1cc00bf77e6a0b501166e8c28a9b5e30ed009f",
+    "integration/p0/secure-native-read.cp046.test.mjs": "00b6c97c744e1f2710901d807ea5735650bf54d29e5e1f0ab27a5a2167c2f0eb",
+    "integration/p0/secure-native-cp014-ledger.cp046.test.mjs": "9b8dd1ebe7451a987409910aed202fd0a78c21007361fa06b184b0352091a0a7",
+    "lab/cp014/identity.mjs": "00958ae2a32c32c3114b5ac827ea66a7a04473ead48f10a6f19c75decb819439",
+    "lab/cp014/session-gateway.mjs": "da155ada11bac275e3abfffba89da818dce90e886ce0f65a456391a385b799ea",
+    "lab/cp014/projection.mjs": "987e61c2974eaeeeb510468e2e6fbd877cfb40959807741dec88655f5e74718f",
+    "scripts/run-p0-tests.mjs": "2a9824e125245e471accc607a085d59b2510509f3ee4b0e2395518f3335bfc83",
+    "docs/CP046-NATIVE-HTTP-HANDOFF.md": "fbfebe56901cd95d70bcf0568e5a45d640ce09ecaeb4ee24b9089dfcfef0a62c"
+  },
+  "sourcePr": "Otiosun/crownicles-portal/pull/15",
+  "originalCP014SourceFile": "CP014 — Perfil nativo e preparação de integração.zip",
+  "productionAllowed": false
+}
