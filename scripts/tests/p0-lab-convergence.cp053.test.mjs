@@ -117,3 +117,13 @@ test('CP053 TAP needs a version, a bounded plan and an executed test record',()=
  for(const invalid of [tap(202).replace('TAP version 13\n',''),tap(202).replace('1..202','1..999'),tap(202).replace('ok 1 - fixture\n','')])
   assert.throws(()=>inspectLabEvidence('p0',invalid),/TAP_PLAN_MISSING_OR_INCONSISTENT/);
 });
+
+test('CP053 requires the CP054 eighth Chromium suite when the npm script references it',()=>{
+ const packageLine='> python test_preview.py && python test_item_inspection.cp054.py\n';
+ assert.throws(()=>inspectLabEvidence('browser',packageLine+browser),/CP054 BROWSER/);
+ assert.equal(inspectLabEvidence('browser',packageLine+browser+'\nCP054 BROWSER 104 / 104').count,247);
+ assert.throws(()=>inspectLabEvidence('browser',packageLine+browser+'\nCP054 BROWSER 103 / 104'),/BASELINE_DROPPED:CP054/);
+});
+test('CP053 counts an explicit CP054 report even when the npm echo is hidden',()=>{
+ assert.equal(inspectLabEvidence('browser',browser+'\nCP054 BROWSER 104 / 104').count,247);
+});
