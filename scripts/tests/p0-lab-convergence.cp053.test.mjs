@@ -8,7 +8,7 @@ import {spawnSync} from 'node:child_process';
 import {inspectLabEvidence,parseTapSummaries,runLabGate} from '../p0-lab-convergence.cp053.mjs';
 
 const tap=(n,{pass=n,fail=0,skipped=0,todo=0,cancelled=0}={})=>
-  `TAP version 13\n1..${n}\n# tests ${n}\n# pass ${pass}\n# fail ${fail}\n# cancelled ${cancelled}\n# skipped ${skipped}\n# todo ${todo}\n`;
+  `TAP version 13\nok 1 - fixture\n1..${n}\n# tests ${n}\n# pass ${pass}\n# fail ${fail}\n# cancelled ${cancelled}\n# skipped ${skipped}\n# todo ${todo}\n`;
 const browser=[
  'UX-P0-010 Chromium checks 46 / 46',
  'CP047 keyboard/accessibility-tree smoke: 10 / 10',
@@ -111,4 +111,9 @@ test('CP053 real npm subprocess smoke passes and rejects missing browser evidenc
   assert.match(red.stderr,/CP053_BROWSER_MARKER_MISSING_OR_DUPLICATE/);
   assert.doesNotMatch(red.stdout,/CP053_LOCAL_P0_GATE=PASS/);
  }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('CP053 TAP needs a version, a bounded plan and an executed test record',()=>{
+ for(const invalid of [tap(202).replace('TAP version 13\n',''),tap(202).replace('1..202','1..999'),tap(202).replace('ok 1 - fixture\n','')])
+  assert.throws(()=>inspectLabEvidence('p0',invalid),/TAP_PLAN_MISSING_OR_INCONSISTENT/);
 });
