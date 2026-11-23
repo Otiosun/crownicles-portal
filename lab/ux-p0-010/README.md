@@ -3,7 +3,7 @@
 - `preview.html` é uma prévia **local**, derivada do laboratório UX-P0-007. Não tem dados sintéticos embutidos e não cria sessão.
 - `controller.mjs` consome as respostas estritas do `createP0BrowserReader` (CP046), preserva a máquina UX-P0-008 e limpa dados locais em logout/erro/timeout. Não implementa login, banco, Keycloak, novo nome de item ou ação de jogo.
 - A sessão deve existir **antes** da verificação, no servidor. Pressionar “Verificar sessão existente” nunca autentica por si só.
-- `test_preview.py`: interface real via Chromium `page.set_content`, módulos ESM completos como `data:` URI (limitação do sandbox). 41 asserções.
+- `test_preview.py`: interface real via Chromium `page.set_content`, módulos ESM completos como `data:` URI (limitação do sandbox). 44 asserções.
 - `test_http_bridge.py`: DOM Chromium → relay Python → HTTP Node no loopback com os módulos CP014/CP046 verdadeiros e dois atores sintéticos. 14 asserções, sem testar browser HTTPS/Cookie real.
 - `test-http-server.mjs`: fixture **test-only**, servidor de ledger SQLite `:memory:`, sessões aleatórias, um protocolo de teste via stdin. NUNCA expor externamente ou fazer deploy.
 
