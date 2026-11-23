@@ -7,6 +7,7 @@
     "test:web": "node --test web/tests/interaction.test.cjs web/tests/contract.test.cjs",
     "test:integration": "node --test integration/tests/combined.test.mjs integration/tests/native-projection.test.mjs",
     "test:p0": "node scripts/run-p0-tests.mjs",
+    "test:p0:browser": "python lab/ux-p0-010/test_preview.py && python lab/ux-p0-010/accessibility-smoke.cp047.py && python lab/ux-p0-010/test_http_bridge.py",
     "test:tools": "node --test scripts/tests/*.test.mjs",
     "test": "npm run test:web && npm run test:integration && npm run test:tools && npm run test:p0",
     "audit:imports": "node scripts/native-import-audit.mjs",
