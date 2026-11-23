@@ -39,3 +39,9 @@ Este gate é deliberadamente **somente laboratório**, não um gate de produçã
 O ensaio Chromium existente usa `page.set_content` com ESM e transporte fixture; o teste HTTPS usa Node e Python CookieJar. Não interpolar esses resultados em um único teste E2E real de autenticação.
 
 Próxima decisão: revisão independente CP053 + checkout íntegro CP052, executar `npm run gate:p0:lab` e `npm run check` em ambiente equipado, e só então avaliar gates nativos pendentes. PR empilhado sobre #22 para não conflitar com outros trabalhadores.
+
+## Atenção à composição paralela (23/11)
+
+A PR #24 (CP054, novos fatos nativos de itens) e a PR #26 (CP053-PREVIEW, HTTPS opt-in) também partem da **PR #22**, não desta branch. **As três alteram `package.json`**, embora suas alterações de código de domínio/scripts sejam distintas. Antes de qualquer integração, reconciliar manualmente os scripts de `package.json` mantendo as três entradas, sem apagar a dos outros chats.
+
+A CP054 relata +8 testes Node e +104 verificações Chromium; este gate só exige os **sete marcadores históricos CP047–052**. Se a equipe integrar CP054, adicionar o oitavo marcador CP054 e sua baseline (104) ao manifesto do gate, além de preservar as verificações anteriores. **Sem essa atualização, CP053-GATE não atesta completude da suíte CP054, mesmo com exit zero**. Manter as PRs em DRAFT até isso ser testado na composição resultante. Isto não invalida a avaliação isolada sobre a base CP052.
