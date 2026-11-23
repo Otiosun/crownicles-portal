@@ -27,7 +27,7 @@ Fechar o elo de laboratório que faltava entre a autenticação CP013/CP014 e o 
 - `integration/p0/secure-native-read.cp046.test.mjs`: 24 casos. Exercita estados HTTP, consentimento implícito do cookie privado, isolamento 30 reads de 2 atores, ID0, UX, cookies duplicados, cabeçalhos brutos inconsistentes, autorização ambígua, cabeçalhos Origin, timeout, abort, sessão trocada durante consulta e invalid ready.
 - `integration/p0/secure-native-cp014-ledger.cp046.test.mjs`: 7 casos; **IdentityLedger SQLite original**, desafio/requisição privada, confirmação, cookie, 401 após revogação, isolamento de dois atores, mudança de época e ciclo HTTP original `/v1/link/start` → aprovação fora do browser → `/v1/link/redeem` → `/v1/me/*` CP046 → logout. Sessões sintéticas, `:memory:`, nenhum WhatsApp real.
 - Mutantes descartáveis (source no Git intacto) falharam como esperado: desabilitar recheck de sessão falhou 4 testes, desabilitar verificações de dono falhou 1, permitir header Authorization bruto falhou 1.
-- `scripts/run-p0-tests.mjs` troca o comando POSIX `CP042_REQUIRED=1 node ...` por `spawnSync` Node com env controlado, **compatível com Windows**, inclui `plant-capacity-regression.cp045.test.mjs` previamente fora do padrão e exige nove suites explicitamente. **148/148 PASS, 0 fail, 0 skipped** local em Node v22.16.0 com SQLite embutido experimental. Não é CI remoto. Testes originais externos CP012/014 continuam opcionais, protegidos por hashes, não são descobertos automaticamente.
+- `scripts/run-p0-tests.mjs` troca o comando POSIX `CP042_REQUIRED=1 node ...` por `spawnSync` Node com env controlado, **compatível com Windows**, inclui `plant-capacity-regression.cp045.test.mjs` previamente fora do padrão e exige dez suites explicitamente. **158/158 PASS, 0 fail, 0 skipped** local em Node v22.16.0 com SQLite embutido experimental. Não é CI remoto. Testes originais externos CP012/014 continuam opcionais, protegidos por hashes, não são descobertos automaticamente.
 
 ## Bloqueios antes de aceitar ou lançar
 
@@ -36,3 +36,11 @@ Fechar o elo de laboratório que faltava entre a autenticação CP013/CP014 e o 
 - GitHub Actions privado falha pré-etapas (runner não iniciou); nenhuma mudança neste PR corrige billing/policy/runner.
 - Teste de usabilidade T01–T06 com jogadores, leitores de tela e fontes canônicas de nomes/arte/catálogo pendentes.
 - Todo código fica em PR DRAFT separado. **Proibido mesclar/deployar como endpoint público sem autorização e gates reais.**
+
+## CP046-B — transporte de navegador sem tokens no script
+
+O novo `integration/p0/browser-reader.cp046.mjs` transporta Perfil e Inventário pela API Fetch com `credentials:same-origin`, `cache:no-store` e `redirect:error`. Ele usa `startRead`/`finishRead` da ponte CP041 e a máquina UX-P0-008; nunca constrói `Authorization`, `Cookie` ou parâmetro `askedPlayer`, não autoriza outros métodos e não oferece ações de jogo.
+
+O corpo JSON só é consumido quando a resposta tem MIME `application/json`, cabeçalhos coerentes e `ReadableStream`; é lido em chunks limitados a 128KiB com decodificação UTF-8 estrita. Status 401 revoga a sessão/limpa os dois domínios, mesmo se um pedido mais recente já havia resolvido na mesma época. READY atrasado de pedido antigo é descartado; após logout o controlador aborta pedidos locais e a máquina descarta qualquer resposta de época antiga. Erros HTTP, corpo grande, JSON inválido, DTO malformado e erro de stream são indisponíveis, sem copiar detalhes privados.
+
+**10 testes** novos em `browser-reader.cp046.test.mjs`, incluindo concorrência de 401/READY, resposta alterada, limite 128KiB, HTML inesperado, UTF-8 inválido, proteção de cabeçalhos e HTTP loopback. A primeira execução cruzada teve 157/158: a fixture inventava `expiresAt=Date.now()+100000` em cada verificação, alterando a prova de sessão entre o `before-read` e `after-read` — o gateway a rejeitou corretamente. A fixture foi corrigida para fixar a expiração original; **158/158 PASS** em `node scripts/run-p0-tests.mjs` local, 0 falha/skip. Esse é um teste de transporte e estado, **não** uma prova de Chrome HTTPS nem da interface visual ou da sessão Keycloak real.

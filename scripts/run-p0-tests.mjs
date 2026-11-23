@@ -15,7 +15,8 @@ const files=[
   'integration/p0/home-link.cp045.test.mjs',
   'integration/p0/plant-capacity-regression.cp045.test.mjs',
   'integration/p0/secure-native-read.cp046.test.mjs',
-  'integration/p0/secure-native-cp014-ledger.cp046.test.mjs'
+  'integration/p0/secure-native-cp014-ledger.cp046.test.mjs',
+  'integration/p0/browser-reader.cp046.test.mjs'
 ];
 for(const file of files){
   if(!existsSync(new URL('../'+file,import.meta.url))){

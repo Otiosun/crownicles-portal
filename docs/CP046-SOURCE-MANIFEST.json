@@ -8,10 +8,13 @@
     "lab/cp014/identity.mjs": "00958ae2a32c32c3114b5ac827ea66a7a04473ead48f10a6f19c75decb819439",
     "lab/cp014/session-gateway.mjs": "da155ada11bac275e3abfffba89da818dce90e886ce0f65a456391a385b799ea",
     "lab/cp014/projection.mjs": "987e61c2974eaeeeb510468e2e6fbd877cfb40959807741dec88655f5e74718f",
-    "scripts/run-p0-tests.mjs": "2a9824e125245e471accc607a085d59b2510509f3ee4b0e2395518f3335bfc83",
-    "docs/CP046-NATIVE-HTTP-HANDOFF.md": "fbfebe56901cd95d70bcf0568e5a45d640ce09ecaeb4ee24b9089dfcfef0a62c"
+    "scripts/run-p0-tests.mjs": "a36a7080885dde5188493d912de6f866caaf34847181b9f54aba9f13b81adab9",
+    "docs/CP046-NATIVE-HTTP-HANDOFF.md": "653da09423cacdb97f9e65d20b4d439309a8b92b09bf99e08a9b977f68aaed44",
+    "integration/p0/browser-reader.cp046.mjs": "5d0de3b6a968bcd2f38c86486017fe24d1442b4348e715d4b32c7394e0fbbdb6",
+    "integration/p0/browser-reader.cp046.test.mjs": "78340cf818151deaebdf5d57199300a71780f51479a1461aeee91a61cacf8158"
   },
   "sourcePr": "Otiosun/crownicles-portal/pull/15",
   "originalCP014SourceFile": "CP014 — Perfil nativo e preparação de integração.zip",
-  "productionAllowed": false
+  "productionAllowed": false,
+  "note": "CP046-B browser fetch reader with bounded JSON; mandatory P0 158/158 locally; source SHA256 fields updated"
 }
