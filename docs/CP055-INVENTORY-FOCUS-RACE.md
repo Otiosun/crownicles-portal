@@ -37,10 +37,10 @@ npm run test:p0:https
 - Browser Chromium P0 original: **143/143** PASS em uma bateria completa (as sete suítes).
 - Multi-viewport Chromium focal CP055: **40/40 PASS** em 320/390/430/768/1440 px, com movimento padrão e reduzido; tanto sobre CP052+CP055 quanto sobre composição CP054+CP055, incluindo foco, limpeza de busca, linhas e ausência de overflow.
 - HTTPS/CP049 Node: **12/12**, Python CookieJar **4/4**, sem mudança de arquivos TLS.
-- Stress simples CP050 (última busca limpa sem salto de foco): após versão final, **35/35** PASS. Stress adicional solicitado de 120 repetições foi **INTERROMPIDO** por limite externo após registrar **81/81** PASS; 39 execuções restantes **NÃO** foram feitas e não contam como aprovação.
+- Stress simples CP050 (última busca limpa sem salto de foco): após versão final, **35/35** PASS, mais **25/25** PASS em sessão adicional. Uma bateria planejada de 120 foi **INTERROMPIDA** por limite externo após registrar **81/81** PASS; 39 restantes **NÃO** foram executadas nem contadas. Total realmente concluído nas três baterias: **141/141 PASS**, sem alegar repetibilidade perfeita.
 - Os arquivos `controller.mjs` e `test_focus_race.cp055.py` foram comparados com blobs Git exatos no PR; integração real com CP054 e com ART01 não é afirmada.
 
-**Limites:** o Chromium usa `page.set_content`, fetch sintético com módulos reais, não navegador HTTPS efetivo nem ator autorizado. O bug é de foco local; esta correção não homologa Keycloak/OIDC, Core/MariaDB nativos, WhatsApp, CI runner, arte, runtime ou produção. Não afirmar que o problema é resolvido universalmente com apenas 116 execuções de laboratório.
+**Limites:** tentativa adicional de abrir a prévia HTTPS real no Chromium local reproduziu `net::ERR_BLOCKED_BY_ADMINISTRATOR`; o navegador não chegou a renderizar a página. O Chromium dos testes aprovados usa `page.set_content`, fetch sintético com módulos reais, não navegador HTTPS efetivo nem ator autorizado. O bug é de foco local; esta correção não homologa Keycloak/OIDC, Core/MariaDB nativos, WhatsApp, CI runner, arte, runtime ou produção. Não afirmar que o problema é resolvido universalmente com apenas 116 execuções de laboratório.
 
 ## Integração e risco de PR
 
