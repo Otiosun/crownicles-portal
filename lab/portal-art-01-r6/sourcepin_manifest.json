@@ -1,0 +1,12 @@
+{
+  "branch": "feature/cp052-inventory-name-search-20261123",
+  "files": {
+    "lab/ux-p0-010/controller.mjs": "f2a7170484b80d1bf1e0f707b2c2a50ecc227394",
+    "lab/ux-p0-010/link-flow.cp048.mjs": "91e053dd3fe6cf2fbe4c7497ae7761c72df5ff37",
+    "integration/p0/browser-reader.cp046.mjs": "39ff43dca1a2ca1f9e1bd076c640d0e709abb031",
+    "lab/ux-p0-003/machine.mjs": "70325ca829c5c2f6c9f3d3d025ba9e07157773ce",
+    "lab/ux-p0-010/catalog.pt.cp051.mjs": "8236a550bdee8a76d857161e0b8048438984571a",
+    "integration/p0/response-bridge.mjs": "5826b4c509ea44909bf7e5bbf35669a4aad2e34e",
+    "integration/p0/projection-guard.mjs": "c73829014d159341d7fd7ace6860dd392be6c92e"
+  }
+}

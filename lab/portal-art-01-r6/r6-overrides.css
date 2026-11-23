@@ -1,0 +1,33 @@
+
+/* ART01 R6: density before decoration; R5 visuals still illustrative, not approved. */
+.visual[hidden],.visual[data-mode="closed"]{display:none!important}
+.visual{height:140px;max-height:none;min-width:0;display:grid;grid-template-columns:110px minmax(0,1fr);grid-template-rows:auto auto;place-content:initial;align-items:center;justify-content:initial;gap:0 16px;text-align:left;padding:12px clamp(14px,3vw,32px);border:0;border-bottom:1px solid #668678;box-shadow:inset 0 1px 0 #d8ddc955}
+.visual::before{background:linear-gradient(100deg,#142c32 0%,#10272e 54%,#081820 100%)}
+.visual::after{background:none}
+.visual .circle{grid-column:1;grid-row:1/span 2;justify-self:start;width:92px;height:94px;border:1px solid #b6bda58a;border-left:5px solid #dfb88c;border-radius:5px;background:#122832ad;box-shadow:none;transform:none!important}
+.visual .circle b{font:normal clamp(1.5rem,3.4vw,2.75rem)/1 Georgia,serif;overflow-wrap:anywhere}
+.visual h1{grid-column:2;grid-row:2;margin:0;font-size:clamp(1.3rem,3.5vw,2.45rem);line-height:1.18;min-width:0;overflow-wrap:anywhere}
+.visual .hint{grid-column:2;grid-row:1;font-size:.7rem;letter-spacing:.1em;line-height:1.3;min-width:0;overflow-wrap:anywhere}
+.visual[data-mode="profile"]{height:112px}
+.visual[data-mode="inventory"]{height:118px}
+.visual[data-mode="detail"]{height:132px}
+.visual[data-mode="detail"] .circle{border-color:#d9b78a;border-left-width:8px}
+.frame{padding-top:10px}
+.layout{margin-top:9px}
+@media(max-width:690px){
+ .mast{min-height:55px}
+ .visual,.visual[data-mode="profile"],.visual[data-mode="inventory"],.visual[data-mode="detail"]{height:auto;min-height:86px;grid-template-columns:62px minmax(0,1fr);gap:0 9px;padding:8px 11px}
+ .visual .circle{width:49px;height:55px;border-left-width:4px}
+ .visual .circle b{font-size:clamp(1.35rem,5vw,1.8rem)}
+ .visual h1{font-size:clamp(1.25rem,5vw,1.72rem);margin:0}
+ .visual .hint{font-size:.64rem;letter-spacing:.075em}
+ .layout{margin-top:6px}
+ .rail{padding:7px}
+ .rail nav{display:flex;flex-wrap:wrap;gap:5px}
+ .rail nav button{min-width:min(105px,100%);flex:1 1 auto}
+ .screen{padding:12px}
+ .screen h1{font-size:clamp(1.45rem,6vw,2rem);line-height:1.12}
+}
+@media(max-width:360px){.visual{grid-template-columns:54px minmax(0,1fr)}.visual .circle{width:43px;height:50px}.visual h1{font-size:1.25rem}}
+@media(prefers-reduced-motion:reduce){.visual,.visual *{transition:none!important;animation:none!important}}
+
