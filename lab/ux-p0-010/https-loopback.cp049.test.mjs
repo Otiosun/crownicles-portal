@@ -154,7 +154,7 @@ test('CP049 strict same-origin static HTML can bootstrap only allowlisted public
 });
 test('CP049 public module import graph loads via HTTPS and private/server files stay inaccessible',async()=>{
  const publicPaths=[
-  '/lab/ux-p0-010/controller.mjs','/lab/ux-p0-010/link-flow.cp048.mjs',
+  '/lab/ux-p0-010/controller.mjs','/lab/ux-p0-010/link-flow.cp048.mjs','/lab/ux-p0-010/catalog.pt.cp051.mjs',
   '/lab/ux-p0-003/machine.mjs','/integration/p0/browser-reader.cp046.mjs',
   '/integration/p0/response-bridge.mjs','/integration/p0/projection-guard.mjs'
  ];

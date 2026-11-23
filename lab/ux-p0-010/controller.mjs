@@ -7,11 +7,13 @@
 import {createP0BrowserReader} from '../../integration/p0/browser-reader.cp046.mjs';
 import {createP0LinkFlow} from './link-flow.cp048.mjs';
 import {itemAt,canInspect,P0_CATEGORIES} from '../ux-p0-003/machine.mjs';
+import {itemName} from './catalog.pt.cp051.mjs';
 
 const LABELS=Object.freeze({weapon:'Armas',armor:'Armaduras',potion:'Poções',object:'Objetos'});
 const ESC=Object.freeze({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'});
 const escapeText=value=>String(value).replace(/[&<>"']/g,ch=>ESC[ch]);
 const slotLabel=slot=>slot===0?'Posição ativa':`Reserva ${slot}`;
+const catalogLabel=(category,id)=>itemName(category,id)??'Nome não disponível';
 /** Strict, read-only ID lookup. An empty query means all local rows; invalid
  * input must never silently coerce to zero (a valid Crownicles item ID). */
 export function filterInventoryIdRows(rows,raw){
@@ -56,10 +58,10 @@ function inventoryView(s,inventoryQuery){
  const rows=[{slot:0,display:c.active},...c.reserves].filter(row=>itemAt(q.data,s.category,row.slot));
  for(const row of rows){
   const selected=s.selected?.category===s.category&&s.selected?.slot===row.slot&&s.selected?.id===row.display.id;
-  out+=`<button class="item ${selected?'selected':''}" id="item-${s.category}-${row.slot}" data-action="select" data-category="${s.category}" data-slot="${row.slot}" data-item-id="${escapeText(row.display.id)}" aria-pressed="${!!selected}"><span><span class="slot">${escapeText(slotLabel(row.slot))}</span><br><span class="itemid">ID ${escapeText(row.display.id)} · sem nome ou arte atribuída</span></span><span aria-hidden="true">${selected?'●':'○'}</span></button>`;
+  out+=`<button class="item ${selected?'selected':''}" id="item-${s.category}-${row.slot}" data-action="select" data-category="${s.category}" data-slot="${row.slot}" data-item-id="${escapeText(row.display.id)}" aria-pressed="${!!selected}"><span><span class="slot">${escapeText(slotLabel(row.slot))}</span><br><span class="itemid">${escapeText(catalogLabel(s.category,row.display.id))} · ID ${escapeText(row.display.id)} · sem arte atribuída</span></span><span aria-hidden="true">${selected?'●':'○'}</span></button>`;
  }
  out+='</div>';
- if(s.selected)out+=`<div class="selection"><strong>Selecionado:</strong> ${escapeText(LABELS[s.selected.category])}, ${escapeText(slotLabel(s.selected.slot))}, ID ${escapeText(s.selected.id)}.<div class="actions"><button class="primary" data-action="inspect" ${canInspect(s)?'':'disabled'}>Inspecionar item</button></div></div>`;
+ if(s.selected)out+=`<div class="selection"><strong>Selecionado:</strong> ${escapeText(LABELS[s.selected.category])}, ${escapeText(slotLabel(s.selected.slot))}, ${escapeText(catalogLabel(s.selected.category,s.selected.id))} · ID ${escapeText(s.selected.id)}.<div class="actions"><button class="primary" data-action="inspect" ${canInspect(s)?'':'disabled'}>Inspecionar item</button></div></div>`;
  out+='<div class="actions"><button data-action="profile">Voltar ao personagem</button><button data-action="refresh">Atualizar pertences</button></div>';
  return out;
 }
@@ -69,13 +71,13 @@ function detailView(s,inventoryQuery){
  const c=q.data.categories.find(x=>x.category===sel.category);
  const display=sel.slot===0?c?.active:c?.reserves.find(x=>x.slot===sel.slot)?.display;
  if(!display||display.id!==sel.id)return inventoryView(s,inventoryQuery);
- const facts=[['Categoria',LABELS[sel.category]],['Posição',slotLabel(sel.slot)],['ID de catálogo',display.id]];
+ const facts=[['Categoria',LABELS[sel.category]],['Posição',slotLabel(sel.slot)],['Nome do catálogo oficial (pt)',catalogLabel(sel.category,display.id)],['ID de catálogo',display.id]];
  for(const key of ['attack','defense','speed']){
   const stat=display[key];if(!stat)continue;
   if(stat.baseValue!==undefined)facts.push([`${key} · base`,stat.baseValue]);
   if(stat.upgradeValue!==undefined)facts.push([`${key} · melhoria`,stat.upgradeValue]);
  }
- return `<p class="eyebrow">Consulta / 02 / Inspeção</p><h1 id="detail-heading" tabindex="-1">Inspecionar item</h1><p class="lede">Detalhes somente de leitura da posição selecionada.</p><dl class="facts">${facts.map(([a,b])=>`<div class="fact"><dt>${escapeText(a)}</dt><dd>${escapeText(b)}</dd></div>`).join('')}</dl><div class="message"><strong>Catálogo aguardando fonte</strong><p>Este item não recebe nome traduzido nem ilustração sem catálogo e licença validados.</p></div><div class="actions"><button class="primary" data-action="back">Voltar ao mesmo item</button></div>`;
+ return `<p class="eyebrow">Consulta / 02 / Inspeção</p><h1 id="detail-heading" tabindex="-1">Inspecionar item</h1><p class="lede">Detalhes somente de leitura da posição selecionada.</p><dl class="facts">${facts.map(([a,b])=>`<div class="fact"><dt>${escapeText(a)}</dt><dd>${escapeText(b)}</dd></div>`).join('')}</dl><div class="message"><strong>Nome do catálogo oficial (pt)</strong><p>Texto proveniente do Crownicles original. A localização pt-BR e os direitos de uso de artes permanecem em revisão; nenhuma imagem é atribuída automaticamente.</p></div><div class="actions"><button class="primary" data-action="back">Voltar ao mesmo item</button></div>`;
 }
 
 /** All browser effects are local/same-origin. Calling verify only *attempts*
