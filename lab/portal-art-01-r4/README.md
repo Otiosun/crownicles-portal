@@ -1,21 +1,25 @@
-# PORTAL-ART-01 / R4 — O Fio (estudo isolado)
-Status: **laboratório visual, não aprovado**, em resposta à reprovação explícita do R3. Não é a página real do portal nem representa um artefato canônico do Crownicles.
-## Rodar
-- Abra `lab/portal-art-01-r4/index.html` diretamente no navegador. É autocontido: CSS, JS e WebP embutido, sem chamadas de rede, credenciais, Keycloak, cookies ou servidor.
-- `source.html` preserva o HTML/CSS/JS editável com marcador `__ART_DATA__`, substituível pelo data URI de uma ilustração local. Não usar o placeholder como UI entregue.
-- Os valores nível/vida/experiência/dinheiro, categorias e IDs são **fixtures artificiais explicitamente rotuladas**. Não representam jogadores ou nomes/ilustrações canônicas.
-## O que foi implementado
-- Três estados navegáveis: Personagem → Pertences → Inspeção → retorno à mesma posição. Categorias Armas/Armaduras/Poções/Objetos, IDs e slots; mudança de categoria, detalhe, back por botão/Escape e retorno de foco.
-- Composição independente com área de leitura prioritária, figura ilustrada separada e fio desenhado em SVG somente em desktop; no mobile não compete com a consulta. `prefers-reduced-motion` desativa transições.
-- HTML semântico com botões reais, skip link, h1 e foco; não há ações de item nem qualquer autorização.
-- A ilustração de estudo é uma peça needle/ribbon original gerada separadamente, comprimida para WebP RGBA; a peça não é item do jogo nem foi aprovada. A ilustração completa está codificada no HTML; não usar como asset canônico.
-## Evidência local (não CI)
-- Chromium Playwright via `page.set_content`: 70/70 checks em 320, 390, 430, 768 e 1440 CSS px, seleção/inspeção/volta, preservação de foco, imagem, ausência de overflow e requests externos. Os 5 red flags iniciais (4 overflows/1 foco assíncrono no teste) foram corrigidos antes da execução verde.
-- Imagens 390/1440 dos três estados e código de teste incluídos no pacote Drive; o HTML Git é blob-idêntico ao pacote.
-## Crítica obrigatória
-- **Não chega ao nível de Constance, Twisted Wonderland e MementoMori**. É mais coeso do que os wireframes R3, mas continua dependente de uma imagem central e de uma composição editorial esquerda/direita.
-- Metáfora do fio ainda não tem respaldo de lore; o desenho tem acabamento fantástico, não uma família artística coerente por item/sistema. Mobile preserva rapidez mas tem menos presença pictórica que desktop.
-- Não avaliar com nota “aprovado” por haver testes, screenshot ou ilustração nova. A etapa 05 continua em aberto.
-## Integração: NÃO MEXER
-- Não alterar `web/`, P0 `lab/ux-p0-010/controller.mjs`, fluxo de vínculo, máquina de sessão nem CP045–049. A interface real usa `#navigation`, `#content`, `#status`, ações delegadas, foco e invalidação por 401. Este HTML é uma pesquisa totalmente separada.
-- Próximo avanço substancial: testar uma composição autoral que torne a seleção e a inspeção uma única experiência, com família de arte contextual de verdade e fallback; validar com a crítica do proprietário e sem copiar marcas de terceiros.
+# Crownicles Portal — ART01 R4 / O Fio
+
+**Status: experimento artístico isolado e ainda reprovável.** Surge depois de o responsável reprovar os estudos R3. Esta entrega não estabelece a identidade visual, não representa um item canônico, não cria um artefato no jogo e não modifica a página de produção nem o laboratório técnico P0.
+
+## Abrir e reproduzir
+
+1. Abrir `Crownicles-Fio-Estudo-Interativo.html` no navegador (autocontido, sem rede).
+2. Experimentar Personagem → Pertences → Armas/Armaduras/Poções/Objetos → selecionar posição → Inspecionar → Voltar (ou Esc); a seleção e o foco devem persistir.
+3. Reconstruir sem rede: `python extract_asset.py && python build.py`; o arquivo gerado deve manter o mesmo SHA256 do original. Os arquivos `source.html`, `extract_asset.py` e `build.py` deixam a ilustração e o código separáveis apesar do HTML portátil.
+4. Regressão: `python test_preview.py` e `python qa/test_accessibility.py`. Requerem Python, Playwright e Chromium instalado; são testes locais, NÃO CI/produção.
+
+## O que são as imagens
+
+A peça de metal e tecido foi criada como **imagem conceitual independente**, depois reduzida a WebP RGBA. Seu foco é experimentar continuidade entre áreas: o fio acompanha mudança da navegação, mas não representa armas, poções, o personagem ou um item real. Não há licença/catalogação aprovada para uso final. Dados numéricos, IDs e posições são fixtures sintéticas identificadas como tal.
+
+## Qualidade e limites
+
+- 70/70 verificações de navegação em 320/390/430/768/1440 CSS px; 18/18 smoke de 200% de texto, reduced-motion, cabeçalho, sem overflow nas três telas em 320/390/1440. Os bugs descobertos em overflow e navegação a 200% foram corrigidos, não omitidos.
+- **Não aprova arte nem UX de produto**. Sem navegador HTTPS real, usuário/jogador, Keycloak/OIDC, Core/MariaDB, WhatsApp, T01–T06 ou leitor de tela humano.
+- Visualmente, supera a neutralidade dos esboços R3, mas permanece uma composição de duas colunas com ênfase excessiva em uma peça pictórica genérica. O móvel reduz a imagem para preservar a leitura; a metáfora central ainda não é suficientemente memorável e não é sustentada pela lore.
+- Melhorar exige novo conceito com gesto de seleção mais intrinsecamente conectado ao mundo e família de assets coerente; não usar mais ornamentos ou números de testes para simular qualidade artística.
+
+## Fronteiras de integração
+
+HTML deste estudo é **independente**. O P0 técnico (`lab/ux-p0-010/`) monta `#navigation`, `#content`, `#status` e mantém ações `data-action`, autorização server-side, abort e 401; não trocar essa fonte, não alterar `web/` e não importar o fixture como estado real. O legado das tentativas ART01-R3 e a Constituição Portal permanecem arquivados no Drive Komekko.
