@@ -25,6 +25,23 @@ export function filterInventoryIdRows(rows,raw){
  if(!Number.isSafeInteger(id))return {valid:false,query:null,rows:[]};
  return {valid:true,query:id,rows:rows.filter(row=>row?.display?.id===id)};
 }
+/** Search only the already-authorized category rows. Digits remain exact IDs;
+ * text matches official upstream pt titles, case/accent insensitive.
+ * No fuzzy ownership or cross-category fallback. */
+const foldTitle=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt').replace(/\s+/g,' ').trim();
+export function filterInventoryQueryRows(rows,raw,category){
+ if(!Array.isArray(rows)||typeof raw!=='string'||!P0_CATEGORIES.includes(category))throw TypeError('INVENTORY_QUERY_INPUT');
+ const q=raw.trim();
+ if(!q)return {valid:true,kind:'all',query:null,rows:rows.slice()};
+ if(/^[0-9+\-]/.test(q))return {...filterInventoryIdRows(rows,q),kind:'id'};
+ if(q.length>72||/[<>`{}\x00-\x1f\x7f]/.test(q))return {valid:false,kind:'name',query:null,rows:[]};
+ const needle=foldTitle(q);
+ if(!needle)return {valid:false,kind:'name',query:null,rows:[]};
+ return {valid:true,kind:'name',query:q,rows:rows.filter(row=>{
+  const title=itemName(category,row?.display?.id);
+  return typeof title==='string'&&foldTitle(title).includes(needle);
+ })};
+}
 const message=(title,description,action='')=>`<div class="message" role="status"><strong>${escapeText(title)}</strong><p>${escapeText(description)}</p></div>${action?`<div class="actions"><button class="primary" data-action="${action}">Tentar novamente</button></div>`:''}`;
 const statusLabel=(section,state)=>{
   const label=section==='profile'?'seu personagem':'seus pertences';
@@ -54,7 +71,7 @@ function inventoryView(s,inventoryQuery){
  if(!c)return out+statusLabel('inventory','unavailable');
  out+=`<div class="tabs" role="group" aria-label="Categorias">${P0_CATEGORIES.map(name=>`<button id="category-${name}" data-action="category" data-category="${name}" aria-pressed="${name===s.category}">${escapeText(LABELS[name])}</button>`).join('')}</div>`;
  out+=`<p class="muted">${escapeText(LABELS[s.category])} · capacidade: ${escapeText(c.capacity)} posições (não é quantidade de itens)</p>`;
- out+=`<div class="inventory-search"><label for="inventory-query">Buscar item pelo ID exato</label><input id="inventory-query" type="search" inputmode="numeric" maxlength="15" autocomplete="off" spellcheck="false" placeholder="Ex.: 7" value="${escapeText(inventoryQuery)}"></div><p id="inventory-filter-status" class="muted" role="status" aria-live="polite"></p><p id="inventory-filter-empty" class="muted" hidden>Nenhum item corresponde à busca nesta categoria.</p><div class="item-list" role="group" aria-label="Posições do inventário">`;
+ out+=`<div class="inventory-search"><label for="inventory-query">Buscar por ID ou nome original (pt)</label><input id="inventory-query" type="search" maxlength="72" autocomplete="off" spellcheck="false" placeholder="Ex.: 7 ou Punhal" value="${escapeText(inventoryQuery)}"></div><p id="inventory-filter-status" class="muted" role="status" aria-live="polite"></p><p id="inventory-filter-empty" class="muted" hidden>Nenhum item corresponde à busca nesta categoria.</p><div class="item-list" role="group" aria-label="Posições do inventário">`;
  const rows=[{slot:0,display:c.active},...c.reserves].filter(row=>itemAt(q.data,s.category,row.slot));
  for(const row of rows){
   const selected=s.selected?.category===s.category&&s.selected?.slot===row.slot&&s.selected?.id===row.display.id;
@@ -119,13 +136,14 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
   if(!input)return;
   const buttons=[...content.querySelectorAll('button[data-action="select"]')];
   const rows=buttons.map(element=>({slot:Number(element.dataset.slot),display:{id:Number(element.dataset.itemId)},element}));
-  const result=filterInventoryIdRows(rows,inventoryQuery);
+  const result=filterInventoryQueryRows(rows,inventoryQuery,reader.getState().category);
   const visible=new Set(result.rows.map(row=>row.element));
   for(const button of buttons)button.hidden=!visible.has(button);
   const count=content.querySelector('#inventory-filter-status');
-  if(count)count.textContent=!result.valid?'Digite somente números de ID (até 15 dígitos).':
-   result.query===null?`${buttons.length} itens nesta categoria.`:
-    `${result.rows.length} de ${buttons.length} itens correspondem ao ID ${result.query}.`;
+  if(count)count.textContent=!result.valid?'Digite um ID inteiro ou parte de um nome original (pt).':
+   result.kind==='all'?`${buttons.length} itens nesta categoria.`:
+   result.kind==='id'?`${result.rows.length} de ${buttons.length} itens correspondem ao ID ${result.query}.`:
+    `${result.rows.length} de ${buttons.length} itens correspondem ao nome ${result.query}.`;
   const empty=content.querySelector('#inventory-filter-empty');
   if(empty)empty.hidden=!result.valid||result.rows.length!==0;
   const selection=content.querySelector('.selection');
@@ -242,7 +260,7 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
  const onInput=ev=>{
   const field=ev.target;
   if(field?.id!=='inventory-query'||!content.contains(field))return;
-  inventoryQuery=String(field.value).slice(0,15);
+  inventoryQuery=String(field.value).slice(0,72);
   applyInventoryFilter();
  };
  const onClick=ev=>{
