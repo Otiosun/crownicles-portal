@@ -1,0 +1,54 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="color-scheme" content="dark"><title>Crownicles — P0 · Prova visual R5 (não aprovada)</title><style>
+:root{font:16px/1.5 system-ui,'Segoe UI',sans-serif;color-scheme:dark;--bg:#07131a;--cream:#ede3cb;--quiet:#aabeb7;--line:#42615c;--bright:#e4ba8f}
+*{box-sizing:border-box}body{margin:0;min-width:280px;color:var(--cream);background:var(--bg)}button,select{font:inherit;color:inherit;cursor:pointer}button{min-height:44px;padding:9px 13px;background:#14313a;border:1px solid #78968a}button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,a:focus-visible{outline:3px solid #f5cc8b;outline-offset:3px}[hidden]{display:none!important}a{color:#f4d09f}.skip{position:absolute;top:-90px;left:12px;background:#f0eee2;color:#111;padding:9px 14px;z-index:20}.skip:focus{top:8px}
+.mast{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px clamp(16px,3vw,42px);border-bottom:1px solid #3b605a}.brand{font:1.22rem Georgia,serif;letter-spacing:.2em}.lab{font-size:.63rem;letter-spacing:.08em;color:var(--quiet);text-transform:uppercase}.frame{max-width:1500px;margin:auto;padding:16px clamp(12px,2vw,30px) 24px}
+.visual{height:300px;position:relative;isolation:isolate;display:grid;place-content:center;text-align:center;overflow:hidden;border:1px solid #628074;background:#0d2a32;gap:3px}.visual::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,#07131aa9,#07131a52 45%,#07131acc),url('') center 50%/cover no-repeat;z-index:-2}.visual::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(circle at 50% 50%,#092d38cb 0 14%,transparent 39%)}.visual h1{font:normal clamp(2rem,4vw,4.1rem)/1.1 Georgia,serif;color:#fff0d3;margin:5px 0;letter-spacing:-.045em}.visual .circle{width:110px;height:110px;display:grid;place-items:center;justify-self:center;border:1px solid #d5c59d;border-radius:50%;background:radial-gradient(circle,#234a4c,#0a1d27);box-shadow:0 0 0 9px #071b2399,0 0 34px #f2c38648;transform:rotate(0);transition:transform .4s}.visual[data-mode=detail] .circle{transform:scale(1.14) rotate(9deg)}.visual .circle b{font:normal 3rem Georgia,serif;color:#ffe6be}.visual .hint{font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:#c5d6c7}
+.layout{display:grid;grid-template-columns:minmax(170px,220px) minmax(0,1fr);gap:14px;margin-top:14px}.rail,.screen{min-width:0;border:1px solid #486e67;background:#0c222bfa}.rail{align-self:start;padding:16px}.rail nav{display:grid;gap:9px}.rail nav button{text-align:left}.rail nav [aria-current=page]{background:#dfc39c;color:#1e2a2a}.rail p{font-size:.8rem;color:var(--quiet)}.screen{padding:clamp(14px,3vw,30px);min-height:320px}.screen h1{font:normal clamp(1.8rem,4vw,3rem) Georgia,serif;margin:0 0 12px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.68rem;color:var(--bright)}.lede{color:#b7c7be;max-width:50ch}.muted{color:#aec2b7;font-size:.84rem}.tag{color:#f4d7af}.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{border:1px solid #426059;padding:12px}.metric span{display:block;color:#b9c7b6;font-size:.75rem}.metric strong{font:normal 1.5rem Georgia,serif}.actions{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}.primary{background:#e8d7b9;color:#14262c;border-color:#f1e0c6;font-weight:700}.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.tabs button[aria-pressed=true]{border-color:#e4c08d;background:#dfc39c;color:#12242c}.item-list{display:grid;gap:6px}.item{min-height:72px;text-align:left;display:flex;justify-content:space-between;gap:15px;padding:12px;width:100%;align-items:center}.item.selected{background:#274b4b;border-color:#deb58d}.itemid,.slot{font-size:.83rem;color:#c3d1c5}.selection{margin:13px 0;padding:14px;border-left:3px solid #e9bc89;background:#103039}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.fact{border-bottom:1px solid #43635d;padding:11px 0}.fact dt{color:#b1c9bd;font-size:.8rem}.fact dd{margin:0;font:normal 1.3rem Georgia,serif}.message{border-left:3px solid #e4bb8e;background:#153038;padding:17px;margin-top:12px}.link-panel{border-top:1px solid #789086;margin-top:25px;padding-top:15px}.challenge-code{font:normal 1.5rem Georgia,serif;overflow-wrap:anywhere}.inventory-search{width:100%;max-width:350px;min-height:44px;padding:9px;background:#0c2530;border:1px solid #9bb0a5;color:var(--cream)}
+.status{color:#a7b8af;font-size:.74rem;padding:10px 0;min-height:35px}.lab-footer{color:#98ada4;font-size:.7rem;border-top:1px solid #45615d;margin-top:20px;padding-top:9px}
+@media(max-width:690px){.mast{padding:12px;min-height:62px;flex-wrap:wrap}.brand{font-size:1rem}.lab{font-size:.56rem;overflow-wrap:anywhere;max-width:100%;display:block}.visual{height:194px}.visual h1{font-size:1.9rem}.visual .circle{width:72px;height:72px}.visual .circle b{font-size:2rem}.frame{padding:8px 0 24px}.layout{display:flex;flex-direction:column;gap:7px;margin-top:7px}.rail{padding:8px 12px;align-self:stretch}.rail nav{display:flex;flex-wrap:wrap}.rail nav button{flex:1;text-align:center;min-width:105px}.rail h2,.rail p{display:none}.screen{padding:15px;min-height:0}.metrics,.facts{grid-template-columns:repeat(2,minmax(0,1fr))}.item{min-width:0}.status,.lab-footer{padding-left:12px;padding-right:12px}}
+@media(max-width:360px){.mast{display:block}.lab{margin-top:6px}.visual{height:186px}.rail nav button{min-width:90px}.screen{padding:11px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style><style>
+/* ART01 R6: density before decoration; R5 visuals still illustrative, not approved. */
+.visual[hidden],.visual[data-mode="closed"]{display:none!important}
+.visual{height:140px;max-height:none;min-width:0;display:grid;grid-template-columns:110px minmax(0,1fr);grid-template-rows:auto auto;place-content:initial;align-items:center;justify-content:initial;gap:0 16px;text-align:left;padding:12px clamp(14px,3vw,32px);border:0;border-bottom:1px solid #668678;box-shadow:inset 0 1px 0 #d8ddc955}
+.visual::before{background:linear-gradient(100deg,#142c32 0%,#10272e 54%,#081820 100%)}
+.visual::after{background:none}
+.visual .circle{grid-column:1;grid-row:1/span 2;justify-self:start;width:92px;height:94px;border:1px solid #b6bda58a;border-left:5px solid #dfb88c;border-radius:5px;background:#122832ad;box-shadow:none;transform:none!important}
+.visual .circle b{font:normal clamp(1.5rem,3.4vw,2.75rem)/1 Georgia,serif;overflow-wrap:anywhere}
+.visual h1{grid-column:2;grid-row:2;margin:0;font-size:clamp(1.3rem,3.5vw,2.45rem);line-height:1.18;min-width:0;overflow-wrap:anywhere}
+.visual .hint{grid-column:2;grid-row:1;font-size:.7rem;letter-spacing:.1em;line-height:1.3;min-width:0;overflow-wrap:anywhere}
+.visual[data-mode="profile"]{height:112px}
+.visual[data-mode="inventory"]{height:118px}
+.visual[data-mode="detail"]{height:132px}
+.visual[data-mode="detail"] .circle{border-color:#d9b78a;border-left-width:8px}
+.frame{padding-top:10px}
+.layout{margin-top:9px}
+@media(max-width:690px){
+ .mast{min-height:55px}
+ .visual,.visual[data-mode="profile"],.visual[data-mode="inventory"],.visual[data-mode="detail"]{height:auto;min-height:86px;grid-template-columns:62px minmax(0,1fr);gap:0 9px;padding:8px 11px}
+ .visual .circle{width:49px;height:55px;border-left-width:4px}
+ .visual .circle b{font-size:clamp(1.35rem,5vw,1.8rem)}
+ .visual h1{font-size:clamp(1.25rem,5vw,1.72rem);margin:0}
+ .visual .hint{font-size:.64rem;letter-spacing:.075em}
+ .layout{margin-top:6px}
+ .rail{padding:7px}
+ .rail nav{display:flex;flex-wrap:wrap;gap:5px}
+ .rail nav button{min-width:min(105px,100%);flex:1 1 auto}
+ .screen{padding:12px}
+ .screen h1{font-size:clamp(1.45rem,6vw,2rem);line-height:1.12}
+}
+@media(max-width:360px){.visual{grid-template-columns:54px minmax(0,1fr)}.visual .circle{width:43px;height:50px}.visual h1{font-size:1.25rem}}
+@media(prefers-reduced-motion:reduce){.visual,.visual *{transition:none!important;animation:none!important}}
+
+</style></head>
+<body><a href="#content" class="skip">Ir ao conteúdo</a><header class="mast"><span class="brand">CROWNICLES</span><span class="lab">Revisão R6 de acesso e consulta · P0 original</span></header>
+<div class="frame"><div id="visual-stage" class="visual" data-mode="closed" aria-hidden="true"><span class="hint" id="visual-context">Somente leitura</span><h1 id="visual-label">Sessão não confirmada</h1><div class="circle"><b id="visual-number">◇</b></div></div>
+<div class="layout"><aside class="rail" aria-label="Navegação"><h2>Áreas</h2><nav id="navigation" aria-label="Navegação principal"></nav><p>A consulta depende exclusivamente da sessão autenticada no servidor.</p></aside><main class="screen" id="content" tabindex="-1" aria-live="off"></main></div><div id="status" class="status" role="status" aria-live="polite">Autenticação necessária.</div><footer class="lab-footer">ART01 R6 · Experimento de acesso e consulta. Arte não aprovada; sessão controlada pelo P0 original.</footer></div>
+<script type="module">
+import {mountR6Visual} from './visual-r6.mjs';
+import {mountP0Portal} from '../ux-p0-010/controller.mjs';
+mountR6Visual(document);
+mountP0Portal(document);
+</script>
+</body></html>
