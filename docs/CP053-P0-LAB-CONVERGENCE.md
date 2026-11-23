@@ -18,7 +18,7 @@ O script sequencia exclusivamente `test:p0`, `test:p0:https` e `test:p0:browser`
 
 Gates mínimos para aceitar sucesso:
 
-- Node P0: resumo TAP real com **>=202** testes, 0 falhas, 0 pulos, 0 cancelamentos, 0 TODO e testes=aprovados.
+- Node P0: resumo TAP com versão, plano e pelo menos um caso executado, com **>=202** testes, 0 falhas, 0 pulos, 0 cancelamentos, 0 TODO e testes=aprovados.
 - HTTPS local: resumo TAP **>=12** testes sem perdas, **4 testes reais Python unittest** com relatório final OK, mais confirmação terminal do runner CP049.
 - Chromium: **sete suites obrigatórias** (46, 10, 14, 19, 20, 11, 23), cada uma com sua linha de contagem, sem perdas. Total mínimo **143 verificações**.
 
@@ -30,7 +30,7 @@ Baseline conjunto de referência: **202 Node + 12 HTTPS Node + 4 Python + 143 Ch
 node --test scripts/tests/p0-lab-convergence.cp053.test.mjs
 ```
 
-Os 14 testes offline são adversariais: baseline rebaixada, TAP repetido ou ausente, skip/fail/cancel/TODO, Python não executado, marca final HTTPS ausente, componente Chromium omitido/duplicado, falha de processo, encerramento por sinal e ordem das três chamadas. **Esses testes comprovam o verificador, não a execução integral das suites herdadas nesta sessão.** A CI remota continua bloqueada antes do runner.
+Os 15 testes offline são adversariais: baseline rebaixada, TAP repetido ou ausente, skip/fail/cancel/TODO, Python não executado, marca final HTTPS ausente, componente Chromium omitido/duplicado, falha de processo, encerramento por sinal e ordem das três chamadas. **Esses testes comprovam o verificador, não a execução integral das suites herdadas nesta sessão.** A CI remota continua bloqueada antes do runner.
 
 ## Limites obrigatórios
 
