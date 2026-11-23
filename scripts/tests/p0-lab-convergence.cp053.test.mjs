@@ -18,13 +18,14 @@ const browser=[
  'CP051 BROWSER: 11 / 11',
  'CP052 PR21 real-controller/catalog Chromium journey: 23 / 23',
  'CP054 BROWSER 104 / 104',
- 'CP055 Chromium focus regression 24/24'
+ 'CP055 Chromium focus regression 24/24',
+ 'CP055 deterministic Chromium focus-race: 14 / 14'
 ].join('\n');
 const https=tap(12)+'CP049_HTTPS_PROTOCOL_GATE=PASS; NODE=12; PY_COOKIEJAR=4; BROWSER_TLS=NOT_TESTED\n'+'Ran 4 tests in 1.54s\n\nOK\n';
 const preview=tap(1);
 
 test('CP055 positive source-shaped P0, HTTPS, Chromium ledgers',()=>{
- assert.deepEqual([inspectLabEvidence('p0',tap(210)).count,inspectLabEvidence('https',https).count,inspectLabEvidence('browser',browser).count,inspectLabEvidence('preview',preview).count],[210,16,271,1]);
+ assert.deepEqual([inspectLabEvidence('p0',tap(210)).count,inspectLabEvidence('https',https).count,inspectLabEvidence('browser',browser).count,inspectLabEvidence('preview',preview).count],[210,16,285,1]);
 });
 test('CP055 fails closed if baseline P0 test count drops even with exit zero',()=>{
  assert.throws(()=>inspectLabEvidence('p0',tap(209)),/P0_BASELINE_DROPPED/);
@@ -65,7 +66,7 @@ test('CP055 requires exactly four stage commands without mutations or network',(
   return {status:0,stdout:data[calls.length-1],stderr:''};
  },report:x=>logs.push(x)});
  assert.deepEqual(calls.map(row=>row.slice(1)),[['run','test:p0'],['run','test:p0:https'],['run','test:p0:browser'],['run','test:p0:preview']]);
- assert.deepEqual(out.map(x=>x.count),[210,16,271,1]);
+ assert.deepEqual(out.map(x=>x.count),[210,16,285,1]);
  assert.match(logs.at(-1),/AUTH_REAL=NOT_TESTED.*MARIADB_REAL=NOT_TESTED.*BROWSER_TLS=NOT_TESTED/);
 });
 test('CP055 stops immediately if a later stage fails or never ran',()=>{
@@ -107,7 +108,7 @@ test('CP055 real npm subprocess smoke passes and rejects missing browser evidenc
   });
   const green=run();
   assert.equal(green.status,0,green.stderr);
-  assert.match(green.stdout,/CP055_STAGE_BROWSER=PASS; CASES=271/);
+  assert.match(green.stdout,/CP055_STAGE_BROWSER=PASS; CASES=285/);
   fake('browser',browser.replace(/^CP052 PR21.*$/m,''));
   const red=run();
   assert.equal(red.status,1);
