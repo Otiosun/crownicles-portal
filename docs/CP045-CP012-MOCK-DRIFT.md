@@ -46,3 +46,16 @@ A suíte expandida ficou em **77/77 PASS (71 originais CP012 + 6 casos F01–F06
 **Pacote privado R2 reproduzível:** [Drive — CP045 CP012 native→P0](https://drive.google.com/file/d/1ximeBG8JQpttXNa7KfmPCJltsHInKPpd/view?usp=drivesdk), ZIP **42.622 bytes**, SHA-256 `d3d4fb975570a441b38f7a08dab08694fc5c5740c9c9160b82ae9436e95f3678`. Contém ZIP original CP012, patch único, os dois arquivos CP045 imutáveis, TAP e README, manifesto **6/6 verificado**. Extração limpa, aplicação do patch e **77/77 reexecutados** com os módulos originais conferidos pelos blobs Git exatos. O R1 de 74 testes fica arquivado para rastrear a evolução; usar o R2 como evidência vigente.
 
 **Não somar 77 aos 171 testes da composição como se fossem 248 testes independentes de banco**: compartilham conceitos, fixtures e projetores, e ambos seguem pré-gate.
+
+## R3 — Perfil CP014 + Inventário CP012, um slice P0 de duas fontes nativas
+
+O R2 de Inventário (77/77) foi estendido à seção **Perfil** sem alterar seu ZIP original CP014 (SHA-256 `f74efef74fb65672a20d7f4d6d12378fd1bbaa4729ce7581e458c58bf0125e43`). Usando uma cópia descartável da suíte `tests/native-profile.test.cjs`, foram acrescentados três testes:
+- `CP045-Profile-Native-01`: `PortalProfileQuery` TS transpilada → `normalizeNativeP0Read('profile', ...) ` do CP045 → `isProjectedP0('profile', ...)`; mesma estrutura e valores da projeção histórica CP014.
+- `CP045-Profile-Native-02`: dois atores A/B com moedas distintas (2450/777), guard `true`, identidades privadas removidas.
+- `CP045-Profile-Native-03`: estados `restricted/not_initialized/unavailable` não transportam payload mesmo se o mock incluir pacote/ID privados.
+
+**CP014: 86/86 PASS** (83 originais + 3), **CP012: 77/77 PASS** (71 originais + 6), Node22/TS5.8, strict. Fonte original dos comandos candidatos TS, dependências simuladas (inclusive ranking SQLite do CP014), sem MariaDB real.
+
+**Pacote único R3** [Drive privado](https://drive.google.com/file/d/1vDDOijQH3Z57QfyIkYBHPLTfaf-mIGD5/view?usp=drivesdk), 109.633 bytes, SHA-256 `0f6544828b9622451b16e77859ef9fe0d2041c65ef3ff1db02a36dfdbb5f50d6`. Possui os dois ZIPs originais, dois patches, TAP 77+86, módulos CP045 por Git blob `83df9f...` e `c73829...`, README e 9/9 hashes SHA. **Reprodução via extração limpa confirmou 77/77 e 86/86, zero skips, e dois hashes Git idênticos.** Preferir R3 no próximo handoff; R1/R2 continuam preservados só para auditoria, sem sumir com evidências.
+
+**Status correto:** essas duas suítes simuladas NÃO homologam Core Node24/TS6, MariaDB, conta SELECT-only, Keycloak/OIDC, HTTPS/browser real nem jogadores. O conjunto 171/171 CP045 já referenciado é outra bateria, com dependências compartilhadas. Não fundir contagens como testes independentes de produção.
