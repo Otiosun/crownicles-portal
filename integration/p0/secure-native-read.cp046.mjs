@@ -176,8 +176,30 @@ export function createP0NativeHttpHandler(options){
     if(!res.destroyed&&!res.writableEnded){res.writeHead(response.status,response.headers);res.end(JSON.stringify(response.body))}
   };
 }
-/** A real loopback HTTP transport *only for isolated tests*, no TLS or cookies issued. */
-export function createP0NativeLabServer(options){return http.createServer(createP0NativeHttpHandler(options));}
+/**
+ * HTTP plaintext is allowed ONLY on an explicit loopback address in tests.
+ * Node's default listen(port) binds a wildcard and can expose session cookies
+ * to the local network. Reject implicit host, sockets, pipes, file descriptors,
+ * DNS names and public interfaces synchronously, before creating a listener.
+ * A production deployment must NOT use this laboratory server factory.
+ */
+export function createP0NativeLabServer(options){
+  const server=http.createServer(createP0NativeHttpHandler(options));
+  const listen=server.listen.bind(server);
+  server.listen=(...args)=>{
+    const first=args[0];
+    let host;
+    if(first&&typeof first==='object'&&!Array.isArray(first)){
+      if(Object.hasOwn(first,'path')||Object.hasOwn(first,'fd'))throw Error('CP046_LAB_LOOPBACK_ONLY');
+      host=first.host;
+    }else if(typeof first==='number'&&Number.isSafeInteger(first)&&first>=0){
+      host=typeof args[1]==='string'?args[1]:undefined;
+    }
+    if(host!=='127.0.0.1'&&host!=='::1')throw Error('CP046_LAB_LOOPBACK_ONLY');
+    return listen(...args);
+  };
+  return server;
+}
 
 /** Narrow adaptation of the original CP014 authority contract (lab only). */
 export function createCP014Resolver({ledger,authority}){

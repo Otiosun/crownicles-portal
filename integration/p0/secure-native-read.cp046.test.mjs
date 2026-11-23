@@ -191,3 +191,22 @@ test('CP046 rejects raw-versus-normalized Cookie disagreement before selecting a
  const reply=await read({...base,headers:{cookie:cookie(TOK_B)}});
  assert.equal(reply.status,400);assert.equal(r.reads.length,0);
 });
+
+test('CP046-LAB native HTTP server must reject implicit wildcard listening',()=>{
+ const server=createP0NativeLabServer(rig());
+ try{assert.throws(()=>server.listen(0),/CP046_LAB_LOOPBACK_ONLY/)}
+ finally{if(server.listening)server.close()}
+});
+test('CP046-LAB native HTTP server must reject explicit wildcard and Unix-socket listening',()=>{
+ const server=createP0NativeLabServer(rig());
+ try{
+  assert.throws(()=>server.listen(0,'0.0.0.0'),/CP046_LAB_LOOPBACK_ONLY/);
+  assert.throws(()=>server.listen({port:0,host:'::'}),/CP046_LAB_LOOPBACK_ONLY/);
+  assert.throws(()=>server.listen('/tmp/cp046-lab-should-not-open.sock'),/CP046_LAB_LOOPBACK_ONLY/);
+ }finally{if(server.listening)server.close()}
+});
+test('CP046-LAB explicitly bound IPv4 loopback still works',async()=>{
+ const server=createP0NativeLabServer(rig());
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{assert.equal(server.address().address,'127.0.0.1')}finally{await new Promise(resolve=>server.close(resolve))}
+});
