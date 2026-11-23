@@ -19,8 +19,10 @@ O usuário reprovou o R3. O R4 preservou a navegação, mas a peça ornamental n
 
 ## Reprodução local
 
+**No GitHub**, esta PR contém os dois HTML autocontidos, `p0-visual.mjs` e os dois testes; os testes podem ser executados diretamente no diretório da PR. **No ZIP do Drive**, também existem a pasta `src/`, os arquivos mestres de arte e os scripts para reconstruir o HTML. A compilação a partir de fontes exige esse ZIP completo (não apenas a PR).
+
 ```sh
-python src/build.py
+python src/build.py      # requer ZIP completo do Drive
 python qa/test_r5.py
 python qa/test_p0_visual.py
 ```
