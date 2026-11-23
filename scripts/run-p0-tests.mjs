@@ -19,7 +19,8 @@ const files=[
   'integration/p0/browser-reader.cp046.test.mjs',
   'lab/ux-p0-010/link-flow.cp048.test.mjs',
   'lab/ux-p0-010/link-http-ledger.cp048.test.mjs',
-  'lab/ux-p0-010/inventory-id-filter.cp050.test.mjs'
+  'lab/ux-p0-010/inventory-id-filter.cp050.test.mjs',
+  'lab/ux-p0-010/catalog.pt.cp051.test.mjs'
 ];
 for(const file of files){
   if(!existsSync(new URL('../'+file,import.meta.url))){
