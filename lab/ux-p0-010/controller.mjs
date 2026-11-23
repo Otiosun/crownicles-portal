@@ -5,6 +5,7 @@
  * This module is a laboratory visual integration, NOT a production login page.
  */
 import {createP0BrowserReader} from '../../integration/p0/browser-reader.cp046.mjs';
+import {createP0LinkFlow} from './link-flow.cp048.mjs';
 import {itemAt,canInspect,P0_CATEGORIES} from '../ux-p0-003/machine.mjs';
 
 const LABELS=Object.freeze({weapon:'Armas',armor:'Armaduras',potion:'Poções',object:'Objetos'});
@@ -78,13 +79,34 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
  let checking=false,signingOut=false,announcement='';
  const focusTo=id=>{if(!focus)return;globalThis.requestAnimationFrame?.(()=>documentRef.getElementById(id)?.focus({preventScroll:true}));};
  const reader=createP0BrowserReader({fetcher,onChange:render});
+ const link=createP0LinkFlow({fetcher,onChange:()=>render(reader.getState()),onLinked:async()=>{
+  await verify();const s=reader.getState();
+  return s.authorized&&s.sections.profile.state!=='idle'&&s.sections.profile.state!=='loading'&&s.sections.profile.state!=='unavailable';
+ }});
+ function linkPanel(){
+  const q=link.getState();
+  const safety='<p class="muted">O código deve ser enviado apenas ao canal privado oficial do bot do jogo. Confirme o pedido no próprio bot. Nunca divulgue em grupos. O navegador não recebe a identidade nem a confirmação privada.</p>';
+  const prefix='<section class="link-panel" aria-labelledby="link-heading"><h2 id="link-heading">Vincular esta sessão</h2>';
+  if(['idle','error','expired','cancelled','rate_limited'].includes(q.phase)){
+   return prefix+(q.message?`<p role="status">${escapeText(q.message)}</p>`:'')+
+    safety+'<div class="actions"><button data-action="link-start">Gerar código temporário</button></div></section>';
+  }
+  if(['requesting','cancelling','verifying'].includes(q.phase))
+   return prefix+`<p role="status">${escapeText(q.message||'Conectando ao servidor…')}</p></section>`;
+  if(q.phase==='linked')return '';
+  const code=q.code?`<p><strong>Código temporário</strong></p><p class="challenge-code" id="link-code"><code>${escapeText(q.code)}</code></p>`:'';
+  const text=q.message?`<p role="status">${escapeText(q.message)}</p>`:'';
+  const buttons=q.phase==='approved'?'<button class="primary" data-action="link-redeem">Concluir vínculo</button>':'<button class="primary" data-action="link-check">Já confirmei — consultar situação</button>';
+  return prefix+code+text+safety+`<div class="actions">${buttons}<button data-action="link-cancel">Cancelar código</button></div></section>`;
+ }
  function render(state){
+  if(!state.authorized && link.getState().phase==='linked')link.reset({notify:false});
   navigation.innerHTML=state.authorized&&!checking?
    `<button data-action="profile" ${state.view==='profile'?'aria-current="page"':''}>Personagem</button><button data-action="inventory" ${state.view!=='profile'?'aria-current="page"':''}>Pertences</button><button data-action="forget">Encerrar sessão</button>`:
    '<p class="muted">Somente leitura</p>';
   if(checking){content.innerHTML='<h1 id="login-heading" tabindex="-1">Verificando sessão</h1>'+statusLabel('profile','loading');}
   else if(!state.authorized){
-   content.innerHTML=`<p class="eyebrow">Acesso privado</p><h1 id="login-heading" tabindex="-1">Seu personagem</h1><p class="lede">É necessário ter uma sessão vinculada e confirmada no servidor. Esta tela não recebe credenciais nem permite escolher outro jogador.</p><div class="actions"><button class="primary" data-action="verify" ${signingOut?'disabled':''}>Verificar sessão existente</button></div>`;
+   content.innerHTML=`<p class="eyebrow">Acesso privado</p><h1 id="login-heading" tabindex="-1">Seu personagem</h1><p class="lede">É necessário ter uma sessão vinculada e confirmada no servidor. Esta tela não recebe credenciais nem permite escolher outro jogador.</p><div class="actions"><button class="primary" data-action="verify" ${signingOut?'disabled':''}>Verificar sessão existente</button></div>${linkPanel()}`;
   }else content.innerHTML=state.view==='detail'?detailView(state):state.view==='inventory'?inventoryView(state):profileView(state);
   status.textContent=announcement||(checking?'Verificando a sessão com o servidor.':state.authorized?'Resposta vinculada à sessão do servidor. Nenhum comando de jogo é enviado.':'Nenhuma sessão autenticada confirmada.');
  }
@@ -152,7 +174,7 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
  }
  async function forget(){
   if(signingOut)return;
-  signingOut=true;checking=false;reader.dispatch({type:'LOGOUT'});
+  signingOut=true;checking=false;link.reset({notify:false});reader.dispatch({type:'LOGOUT'});
   announcement='Dados locais removidos; revogando a sessão no servidor…';render(reader.getState());
   const cancel=new AbortController();let timer;
   const task=(async()=>{
@@ -186,6 +208,10 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
   if(!button||!documentRef.contains(button)||button.disabled)return;
   const action=button.dataset.action,view=reader.getState().view;
   if(action==='verify'){void verify();return;}
+  if(action==='link-start'){void link.start();return;}
+  if(action==='link-check'){void link.check();return;}
+  if(action==='link-redeem'){void link.redeem();return;}
+  if(action==='link-cancel'){void link.cancel();return;}
   if(action==='forget'){void forget();return;}
   if(!reader.getState().authorized||checking||signingOut)return;
   if(action==='profile'||action==='inventory'){
@@ -202,5 +228,5 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
  };
  documentRef.addEventListener('click',onClick);
  render(reader.getState());
- return Object.freeze({reader,verify,forget,destroy:()=>{reader.dispatch({type:'LOGOUT'});documentRef.removeEventListener('click',onClick)}});
+ return Object.freeze({reader,link,verify,forget,destroy:()=>{link.destroy();reader.dispatch({type:'LOGOUT'});documentRef.removeEventListener('click',onClick)}});
 }
