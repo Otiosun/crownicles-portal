@@ -30,7 +30,7 @@ Baseline conjunto de referência: **202 Node + 12 HTTPS Node + 4 Python + 143 Ch
 node --test scripts/tests/p0-lab-convergence.cp053.test.mjs
 ```
 
-Os 13 testes offline são adversariais: baseline rebaixada, TAP repetido ou ausente, skip/fail/cancel/TODO, Python não executado, marca final HTTPS ausente, componente Chromium omitido/duplicado, falha de processo, encerramento por sinal e ordem das três chamadas. **Esses testes comprovam o verificador, não a execução integral das suites herdadas nesta sessão.** A CI remota continua bloqueada antes do runner.
+Os 14 testes offline são adversariais: baseline rebaixada, TAP repetido ou ausente, skip/fail/cancel/TODO, Python não executado, marca final HTTPS ausente, componente Chromium omitido/duplicado, falha de processo, encerramento por sinal e ordem das três chamadas. **Esses testes comprovam o verificador, não a execução integral das suites herdadas nesta sessão.** A CI remota continua bloqueada antes do runner.
 
 ## Limites obrigatórios
 
