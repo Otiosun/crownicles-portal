@@ -29,6 +29,10 @@ export function parseTapSummaries(output){
  for(const k of keys)parsed[k]=[...output.matchAll(new RegExp(`^# ${k} ([0-9]+)\\s*$`,'gm'))].map(m=>Number(m[1]));
  if(parsed.tests.length!==1||keys.some(k=>parsed[k].length!==1))bad('CP053_TAP_SUMMARY_MISSING_OR_DUPLICATE');
  const o=Object.fromEntries(keys.map(k=>[k,parsed[k][0]]));
+ const version=[...output.matchAll(/^TAP version 13\s*$/gm)];
+ const plans=[...output.matchAll(/^1\.\.([0-9]+)\s*$/gm)];
+ const topLevel=[...output.matchAll(/^ok ([0-9]+) - /gm)];
+ if(version.length!==1||plans.length!==1||topLevel.length<1||Number(plans[0][1])<1||Number(plans[0][1])>o.tests)bad('CP053_TAP_PLAN_MISSING_OR_INCONSISTENT');
  if(keys.some(k=>!Number.isSafeInteger(o[k]))||o.tests<1||o.pass!==o.tests||
   o.fail!==0||o.cancelled!==0||o.skipped!==0||o.todo!==0)bad('CP053_TAP_NOT_ALL_EXECUTED');
  return Object.freeze(o);
