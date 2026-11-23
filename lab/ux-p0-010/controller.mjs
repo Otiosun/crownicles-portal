@@ -54,6 +54,46 @@ const statusLabel=(section,state)=>{
   }
 };
 const metric=(name,value)=>`<div class="metric"><span>${escapeText(name)}</span><strong>${escapeText(value)}</strong></div>`;
+/** CP054: presentation-only facts from validated owner-scoped inventory DTO.
+ * Numeric nature/rarity/enchantment codes remain numeric or raw, never guessed
+ * as game names; missing optional fields are omitted, never fabricated. */
+export function nativeItemFacts(display,category){
+ const ordinal=P0_CATEGORIES.indexOf(category);
+ if(ordinal<0||!display||typeof display!=='object'||Array.isArray(display)||
+  display.itemCategory!==ordinal||!Number.isSafeInteger(display.id)||display.id<0||
+  !Number.isSafeInteger(display.rarity)||display.rarity<0)throw TypeError('INVALID_NATIVE_ITEM');
+ const capValue=cap=>{
+  if(cap?.kind==='value'&&typeof cap.value==='number'&&Number.isFinite(cap.value))return cap.value;
+  if(cap?.kind==='unbounded')return 'Ilimitado';
+  if(cap?.kind==='unknown')return 'Não informado';
+  throw TypeError('INVALID_NATIVE_ITEM_CAP');
+ };
+ const result=[['Raridade (índice nativo)',display.rarity]];
+ if(category==='weapon'||category==='armor'){
+  if(!Number.isSafeInteger(display.itemLevel)||display.itemLevel<0)throw TypeError('INVALID_NATIVE_ITEM_LEVEL');
+  result.push(['Nível do item',display.itemLevel]);
+  if(Object.hasOwn(display,'itemEnchantmentId'))result.push(['Encantamento (identificador)',display.itemEnchantmentId]);
+  for(const [field,label] of [['attack','Ataque'],['defense','Defesa'],['speed','Velocidade']]){
+   const stat=display[field];
+   if(!stat||typeof stat!=='object'||typeof stat.baseValue!=='number'||!Number.isFinite(stat.baseValue)||
+    typeof stat.upgradeValue!=='number'||!Number.isFinite(stat.upgradeValue))throw TypeError('INVALID_NATIVE_ITEM_STAT');
+   result.push([`${label} · base`,stat.baseValue],[`${label} · melhoria`,stat.upgradeValue],
+    [`${label} · limite`,capValue(stat.maximum)]);
+  }
+ }else{
+  if(!Number.isSafeInteger(display.nature)||display.nature<0||
+    typeof display.power!=='number'||!Number.isFinite(display.power))throw TypeError('INVALID_NATIVE_ITEM_SUPPORT');
+  result.push(['Natureza (código nativo)',display.nature],['Poder',display.power],
+   ['Poder · limite',capValue(display.maximumPower)]);
+  for(const [key,label] of [['usages','Usos'],['maxUsages','Usos · máximo']]){
+   if(Object.hasOwn(display,key)){
+    if(!Number.isSafeInteger(display[key])||display[key]<0)throw TypeError('INVALID_NATIVE_ITEM_USES');
+    result.push([label,display[key]]);
+   }
+  }
+ }
+ return result;
+}
 function profileView(s){
  const q=s.sections.profile;
  let out='<p class="eyebrow">Consulta / 01</p><h1 id="profile-heading" tabindex="-1">Seu personagem</h1><p class="lede">Dados obtidos do próprio personagem, em modo somente leitura.</p>';
@@ -89,11 +129,7 @@ function detailView(s,inventoryQuery){
  const display=sel.slot===0?c?.active:c?.reserves.find(x=>x.slot===sel.slot)?.display;
  if(!display||display.id!==sel.id)return inventoryView(s,inventoryQuery);
  const facts=[['Categoria',LABELS[sel.category]],['Posição',slotLabel(sel.slot)],['Nome do catálogo oficial (pt)',catalogLabel(sel.category,display.id)],['ID de catálogo',display.id]];
- for(const key of ['attack','defense','speed']){
-  const stat=display[key];if(!stat)continue;
-  if(stat.baseValue!==undefined)facts.push([`${key} · base`,stat.baseValue]);
-  if(stat.upgradeValue!==undefined)facts.push([`${key} · melhoria`,stat.upgradeValue]);
- }
+ facts.push(...nativeItemFacts(display,sel.category));
  return `<p class="eyebrow">Consulta / 02 / Inspeção</p><h1 id="detail-heading" tabindex="-1">Inspecionar item</h1><p class="lede">Detalhes somente de leitura da posição selecionada.</p><dl class="facts">${facts.map(([a,b])=>`<div class="fact"><dt>${escapeText(a)}</dt><dd>${escapeText(b)}</dd></div>`).join('')}</dl><div class="message"><strong>Nome do catálogo oficial (pt)</strong><p>Texto proveniente do Crownicles original. A localização pt-BR e os direitos de uso de artes permanecem em revisão; nenhuma imagem é atribuída automaticamente.</p></div><div class="actions"><button class="primary" data-action="back">Voltar ao mesmo item</button></div>`;
 }
 
