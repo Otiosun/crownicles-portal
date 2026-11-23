@@ -139,11 +139,15 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
     reader.dispatch({type:'AUTH_LOST'});
     announcement='Não foi possível confirmar a sessão durante a atualização. Dados locais removidos.';
    }
-   render(reader.getState());
+   const latest=reader.getState();
+   render(latest);
+   if(!latest.authorized)focusTo('login-heading');
+   else if(latest.view==='inventory'&&latest.selected)focusTo(`item-${latest.selected.category}-${latest.selected.slot}`);
+   else focusTo(latest.view==='inventory'?'inventory-heading':'profile-heading');
   }catch{
    reader.dispatch({type:'AUTH_LOST'});
    announcement='Falha de leitura. Dados locais removidos.';
-   render(reader.getState());
+   render(reader.getState());focusTo('login-heading');
   }
  }
  async function forget(){
