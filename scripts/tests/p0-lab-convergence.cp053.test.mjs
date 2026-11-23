@@ -71,3 +71,13 @@ test('CP053 stops on dependency errors and timeout signals',()=>{
  assert.throws(()=>runLabGate({execute:()=>({error:{code:'ENOENT'}}),report:()=>{}}),/SPAWN:ENOENT/);
  assert.throws(()=>runLabGate({execute:()=>({signal:'SIGTERM'}),report:()=>{}}),/SIGNAL:SIGTERM/);
 });
+test('CP053 npm.cmd uses Windows command-shell transport with fixed arguments only',()=>{
+ const results=[tap(202),https,browser];let i=0;
+ runLabGate({platform:'win32',execute:(bin,args,opts)=>{
+  assert.equal(bin,'npm.cmd');
+  assert.deepEqual(args,['run',['test:p0','test:p0:https','test:p0:browser'][i]]);
+  assert.equal(opts.shell,true,'Windows .cmd scripts need the shell transport');
+  return {status:0,stdout:results[i++]};
+ },report:()=>{}});
+ assert.equal(i,3);
+});
