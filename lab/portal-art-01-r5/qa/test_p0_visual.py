@@ -3,7 +3,9 @@ from playwright.sync_api import sync_playwright
 import re,json,sys
 ROOT=Path(__file__).resolve().parents[1]
 HTML=(ROOT/'p0-shell.html').read_text(encoding='utf8')
-MJS=(ROOT/'src'/'p0-visual.mjs').read_text(encoding='utf8')
+VISUAL=ROOT/'p0-visual.mjs'
+if not VISUAL.exists(): VISUAL=ROOT/'src'/'p0-visual.mjs'
+MJS=VISUAL.read_text(encoding='utf8')
 HTML=re.sub(r'<script type="module">.*?</script>', '', HTML, flags=re.S)
 assert 'controller.mjs' not in HTML
 count=0;fail=[]
