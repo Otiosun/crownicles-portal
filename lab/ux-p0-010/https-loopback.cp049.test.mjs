@@ -2,12 +2,14 @@ import test, {before,after,beforeEach,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import https from 'node:https';
 import http from 'node:http';
 import {IdentityLedger} from '../cp014/identity.mjs';
 import {createCP049HttpsLab} from './https-loopback.cp049.mjs';
+const PROJECT_ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
 const A='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',B='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const REF_A='a'.repeat(64),REF_B='b'.repeat(64);
 const attr=()=>({baseValue:2,upgradeValue:0,maxValue:10});
@@ -36,7 +38,7 @@ function request(path,{method='GET',jar,originHeader,host,ca=cert,rejectUnauthor
      assert.ok(!/; Domain=/i.test(c),'__Host cookie must be host-only');
      if(/; Max-Age=0(?:;|$)/i.test(c))jar.delete(match[1]);else jar.set(match[1],match[2]);
     }
-    resolve({status:res.statusCode,headers:res.headers,body:payload,bytes:text.length,tlsAuthorized:req.socket.authorized});
+    resolve({status:res.statusCode,headers:res.headers,body:payload,text,bytes:text.length,tlsAuthorized:req.socket.authorized});
    });
   });
   req.on('error',reject);req.on('timeout',()=>req.destroy(Error('TIMEOUT')));req.end(body);
@@ -58,7 +60,7 @@ beforeEach(async()=>{
  bindings=new Map([[REF_A,{actor:A,epoch:1}],[REF_B,{actor:B,epoch:1}]]);
  ledger.observeBinding({ref:REF_A,actor:A,epoch:1});ledger.observeBinding({ref:REF_B,actor:B,epoch:1});
  const authority={readBinding:async ref=>bindings.get(ref)??null};
- server=createCP049HttpsLab({tls:{key,cert},ledger,authority,rateScopeFor:async()=>REF_A,
+ server=createCP049HttpsLab({tls:{key,cert},ledger,authority,publicAssetsRoot:PROJECT_ROOT,rateScopeFor:async()=>REF_A,
    readNativeOwn:async({actorId,section})=>{reads.push([actorId,section]);return {actorId,state:'ready',packet:packet(section,actorId)}}});
  await new Promise((resolve,reject)=>server.listen(0,'127.0.0.1',resolve));
  port=server.address().port;origin=`https://127.0.0.1:${port}`;
@@ -135,4 +137,38 @@ test('CP049 rejects duplicated Host headers before CP014 can issue a challenge',
  });
  assert.ok([400,421].includes(r.status),'duplicate Host must fail closed before challenge issuance');
  assert.equal(r.body.includes('issued'),false);
+});
+
+
+test('CP049 strict same-origin static HTML can bootstrap only allowlisted public modules over HTTPS',async()=>{
+ const res=await request('/lab/ux-p0-010/preview.html');
+ assert.equal(res.status,200);
+ assert.match(res.headers['content-type'],/^text\/html/);
+ assert.match(res.text,/<script type="module" src="\.\/entry\.cp049\.mjs"><\/script>/);
+ assert.doesNotMatch(res.text,/<script type="module">/);
+ assert.match(res.headers['content-security-policy'],/script-src 'self'/);
+ assert.match(res.headers['content-security-policy'],/frame-ancestors 'none'/);
+ assert.equal(res.headers['x-content-type-options'],'nosniff');
+ const entry=await request('/lab/ux-p0-010/entry.cp049.mjs');
+ assert.equal(entry.status,200);assert.match(entry.text,/mountP0Portal\(document\)/);
+});
+test('CP049 public module import graph loads via HTTPS and private/server files stay inaccessible',async()=>{
+ const publicPaths=[
+  '/lab/ux-p0-010/controller.mjs','/lab/ux-p0-010/link-flow.cp048.mjs',
+  '/lab/ux-p0-003/machine.mjs','/integration/p0/browser-reader.cp046.mjs',
+  '/integration/p0/response-bridge.mjs','/integration/p0/projection-guard.mjs'
+ ];
+ for(const path of publicPaths){
+  const res=await request(path);
+  assert.equal(res.status,200,path);
+  assert.match(res.headers['content-type'],/^text\/javascript/);
+  assert.equal(res.headers['cache-control'],'private, no-store');
+ }
+ for(const path of ['/lab/cp014/identity.mjs','/lab/cp014/session-gateway.mjs',
+  '/integration/p0/secure-native-read.cp046.mjs','/lab/ux-p0-010/https-cookie-fixture.cp049.mjs',
+  '/lab/ux-p0-010/https-loopback.cp049.mjs','/lab/ux-p0-010/../../cp014/identity.mjs',
+  '/lab/ux-p0-010/%2e%2e/cp014/identity.mjs']){
+  const res=await request(path);
+  assert.equal(res.status,404,'private path must not be served: '+path);
+ }
 });
