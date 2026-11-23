@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,copyFileSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {spawnSync} from 'node:child_process';
 import {inspectLabEvidence,parseTapSummaries,runLabGate} from '../p0-lab-convergence.cp053.mjs';
 
 const tap=(n,{pass=n,fail=0,skipped=0,todo=0,cancelled=0}={})=>
@@ -80,4 +85,30 @@ test('CP053 npm.cmd uses Windows command-shell transport with fixed arguments on
   return {status:0,stdout:results[i++]};
  },report:()=>{}});
  assert.equal(i,3);
+});
+
+test('CP053 real npm subprocess smoke passes and rejects missing browser evidence',()=>{
+ const root=mkdtempSync(join(tmpdir(),'cp053-npm-'));
+ try{
+  mkdirSync(join(root,'scripts'));
+  const own=resolve(dirname(fileURLToPath(import.meta.url)),'../p0-lab-convergence.cp053.mjs');
+  copyFileSync(own,join(root,'scripts/p0-lab-convergence.cp053.mjs'));
+  const fake=(name,output)=>writeFileSync(join(root,`fake-${name}.cjs`),`process.stdout.write(${JSON.stringify(output)});\n`);
+  fake('p0',tap(202));fake('https',https);fake('browser',browser);
+  writeFileSync(join(root,'package.json'),JSON.stringify({name:'cp053-fixture',private:true,scripts:{
+   'test:p0':'node fake-p0.cjs','test:p0:https':'node fake-https.cjs',
+   'test:p0:browser':'node fake-browser.cjs','gate:p0:lab':'node scripts/p0-lab-convergence.cp053.mjs'
+  }}));
+  const run=()=>spawnSync(process.platform==='win32'?'npm.cmd':'npm',['run','gate:p0:lab'],{
+   cwd:root,encoding:'utf8',shell:process.platform==='win32',timeout:30000
+  });
+  const green=run();
+  assert.equal(green.status,0,green.stderr);
+  assert.match(green.stdout,/CP053_STAGE_BROWSER=PASS; CASES=143/);
+  fake('browser',browser.replace(/^CP052 PR21.*$/m,''));
+  const red=run();
+  assert.equal(red.status,1);
+  assert.match(red.stderr,/CP053_BROWSER_MARKER_MISSING_OR_DUPLICATE/);
+  assert.doesNotMatch(red.stdout,/CP053_LOCAL_P0_GATE=PASS/);
+ }finally{rmSync(root,{recursive:true,force:true});}
 });
