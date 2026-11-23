@@ -87,6 +87,7 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
   const q=link.getState();
   const safety='<p class="muted">O código deve ser enviado apenas ao canal privado oficial do bot do jogo. Confirme o pedido no próprio bot. Nunca divulgue em grupos. O navegador não recebe a identidade nem a confirmação privada.</p>';
   const prefix='<section class="link-panel" aria-labelledby="link-heading"><h2 id="link-heading">Vincular esta sessão</h2>';
+  if(signingOut)return prefix+'<p role="status">Encerrando a sessão anterior…</p></section>';
   if(['idle','error','expired','cancelled','rate_limited'].includes(q.phase)){
    return prefix+(q.message?`<p role="status">${escapeText(q.message)}</p>`:'')+
     safety+'<div class="actions"><button data-action="link-start">Gerar código temporário</button></div></section>';
@@ -208,6 +209,7 @@ export function mountP0Portal(documentRef,{fetcher=globalThis.fetch,focus=true,l
   if(!button||!documentRef.contains(button)||button.disabled)return;
   const action=button.dataset.action,view=reader.getState().view;
   if(action==='verify'){void verify();return;}
+  if((checking||signingOut)&&action.startsWith('link-'))return;
   if(action==='link-start'){void link.start();return;}
   if(action==='link-check'){void link.check();return;}
   if(action==='link-redeem'){void link.redeem();return;}
