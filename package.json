@@ -8,13 +8,15 @@
     "test:integration": "node --test integration/tests/combined.test.mjs integration/tests/native-projection.test.mjs",
     "test:p0": "node scripts/run-p0-tests.mjs",
     "test:p0:https": "node scripts/run-p0-https-tests.cp049.mjs",
-    "test:p0:browser": "python lab/ux-p0-010/test_preview.py && python lab/ux-p0-010/accessibility-smoke.cp047.py && python lab/ux-p0-010/test_http_bridge.py && python lab/ux-p0-010/test_link_browser.cp048.py && python lab/ux-p0-010/test_inventory_search.cp050.py && python lab/ux-p0-010/test_catalog.cp051.py && python lab/ux-p0-010/test_catalog_search_journey.cp052.py && python lab/ux-p0-010/test_item_inspection.cp054.py",
+    "test:p0:browser": "python lab/ux-p0-010/test_preview.py && python lab/ux-p0-010/accessibility-smoke.cp047.py && python lab/ux-p0-010/test_http_bridge.py && python lab/ux-p0-010/test_link_browser.cp048.py && python lab/ux-p0-010/test_inventory_search.cp050.py && python lab/ux-p0-010/test_catalog.cp051.py && python lab/ux-p0-010/test_catalog_search_journey.cp052.py && python lab/ux-p0-010/test_item_inspection.cp054.py && python lab/ux-p0-010/test_inventory_focus.cp055.py && python lab/ux-p0-010/test_focus_race.cp055.py",
     "test:tools": "node --test scripts/tests/*.test.mjs",
     "test": "npm run test:web && npm run test:integration && npm run test:tools && npm run test:p0",
     "audit:imports": "node scripts/native-import-audit.mjs",
     "gate:preflight": "node scripts/gate-preflight.mjs",
     "check": "node --check web/app.js && node --check web/contract-adapter.js && npm run audit:imports && npm test",
-    "test:p0:catalog": "node --test lab/ux-p0-010/catalog.pt.cp051.test.mjs && python lab/ux-p0-010/test_catalog.cp051.py"
+    "test:p0:catalog": "node --test lab/ux-p0-010/catalog.pt.cp051.test.mjs && python lab/ux-p0-010/test_catalog.cp051.py",
+    "test:p0:preview": "node --test scripts/test-p0-https-preview.cp053.mjs",
+    "gate:p0:lab": "node scripts/p0-lab-convergence.cp053.mjs"
   },
   "engines": {
     "node": ">=22"
