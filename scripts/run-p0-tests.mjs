@@ -22,7 +22,8 @@ const files=[
   'lab/ux-p0-010/inventory-id-filter.cp050.test.mjs',
   'lab/ux-p0-010/catalog.pt.cp051.test.mjs',
   'lab/ux-p0-010/catalog-search-interop.cp051.test.mjs',
-  'lab/ux-p0-010/inventory-query.cp052.test.mjs'
+  'lab/ux-p0-010/inventory-query.cp052.test.mjs',
+  'lab/ux-p0-010/native-item-facts.cp054.test.mjs'
 ];
 for(const file of files){
   if(!existsSync(new URL('../'+file,import.meta.url))){
