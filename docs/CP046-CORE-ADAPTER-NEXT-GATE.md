@@ -45,3 +45,8 @@ Ambas devem ser portadas e compiladas contra o Core e Lib **no mesmo checkout pi
 7. Verificação humana T01–T06 e TalkBack/NVDA em HTTPs autorizado. Resolver nomes, itens, imagens e licença a partir de catálogo canônico, sem derivar nome público de KeycloakId.
 
 **Condições de não lançamento:** qualquer item acima não provado = DRAFT, sem merge/deploy e sem dados reais. Provas offline: [CP046 215 testes](https://drive.google.com/file/d/17y8XSwG1U09djGCspFUYdq2MlEqpKRqS/view?usp=drivesdk) e [consultas nativas CP012/CP014 R5](https://drive.google.com/file/d/1-tCaw058JW0ogc6b-e2TiH57x_vCo6Ht/view?usp=drivesdk), cópias remotas verificadas byte a byte.
+
+
+## 5. Proveniência e licença de código nativo
+
+O repositório original [Crownicles/Crownicles](https://github.com/Crownicles/Crownicles/tree/64d08c05f11949029317341735f6f73024f19f9b) inclui uma licença **GNU Affero General Public License v3.0** (`LICENSE` Git blob `ada1a8176b23b97e70d89300c3f06c3c471bec2c`). Os módulos CP012/014 e o pacote de reprodução preservam trechos derivados do projeto original para avaliação técnica. Antes de distribuir alterações, oferecer o portal em rede ou incorporar arte/traduções/recurso original, validar as obrigações da licença e proveniência de cada componente com o responsável jurídico/técnico. A conclusão dos testes funcionais **não** valida licenças, autoria ou direitos de imagens/sons.
