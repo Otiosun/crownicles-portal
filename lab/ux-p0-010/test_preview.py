@@ -21,7 +21,8 @@ MACHINE=module_url('lab/ux-p0-003/machine.mjs')
 GUARD=module_url('integration/p0/projection-guard.mjs')
 BRIDGE=module_url('integration/p0/response-bridge.mjs',[("'../../lab/ux-p0-003/machine.mjs'",f"'{MACHINE}'"),("'./projection-guard.mjs'",f"'{GUARD}'")])
 READER=module_url('integration/p0/browser-reader.cp046.mjs',[("'../../lab/ux-p0-003/machine.mjs'",f"'{MACHINE}'"),("'./response-bridge.mjs'",f"'{BRIDGE}'")])
-CONTROLLER=module_url('lab/ux-p0-010/controller.mjs',[("'../../integration/p0/browser-reader.cp046.mjs'",f"'{READER}'"),("'../ux-p0-003/machine.mjs'",f"'{MACHINE}'")])
+LINK=module_url('lab/ux-p0-010/link-flow.cp048.mjs')
+CONTROLLER=module_url('lab/ux-p0-010/controller.mjs',[("'../../integration/p0/browser-reader.cp046.mjs'",f"'{READER}'"),("'../ux-p0-003/machine.mjs'",f"'{MACHINE}'"),("'./link-flow.cp048.mjs'",f"'{LINK}'")])
 HTML=(APP/'preview.html').read_text()
 HTML=re.sub(r'<script type="module">.*?</script>', '', HTML, flags=re.S)
 
@@ -30,9 +31,23 @@ STUB=r'''async controllerUrl => {
  const item=(id,category)=>category<2?{id,rarity:1,itemCategory:category,itemLevel:0,attack:{baseValue:1,upgradeValue:0,maximum:{kind:'value',value:1}},defense:{baseValue:0,upgradeValue:0,maximum:{kind:'value',value:1}},speed:{baseValue:0,upgradeValue:0,maximum:{kind:'value',value:1}}}:{id,rarity:1,itemCategory:category,nature:1,power:0,maximumPower:{kind:'value',value:1}};
  const inventory=()=>({categories:['weapon','armor','potion','object'].map((category,i)=>({category,capacity:i===0?3:1,active:item(0,i),reserves:i===0?[{slot:1,display:item(7,0)},{slot:2,display:item(7,0)}]:[]})),materials:[],talismans:{kind:'not_reported'},plants:{kind:'not_reported'}});
  window.__fixture={profile,inventory};
- window.__mode='normal';window.__calls=[];
+ window.__mode='normal';window.__calls=[];window.__privateApproved=false;window.__issued=false;window.__redeemed=false;const expiry=Date.now()+300000;
  const fetcher=async(url,opts)=>{
   window.__calls.push({url,method:opts.method,credentials:opts.credentials,cache:opts.cache,headers:opts.headers,signal:opts.signal});
+  if(url==='/v1/link/start'){
+   window.__issued=true;
+   return new Response(JSON.stringify({status:'issued',code:'ABCD-EFGH-JKLM',expiresAt:expiry}),{status:201,headers:{'content-type':'application/json'}});
+  }
+  if(url==='/v1/link/status'){
+   return new Response(JSON.stringify({status:window.__privateApproved?'approved':'pending',expiresAt:expiry}),{status:200,headers:{'content-type':'application/json'}});
+  }
+  if(url==='/v1/link/redeem'){
+   if(!window.__privateApproved)return new Response(JSON.stringify({status:'unavailable'}),{status:401,headers:{'content-type':'application/json'}});
+   window.__redeemed=true;return new Response(JSON.stringify({status:'redeemed',expiresAt:Date.now()+28800000}),{status:200,headers:{'content-type':'application/json'}});
+  }
+  if(url==='/v1/link/cancel'){
+   window.__issued=false;return new Response(JSON.stringify({status:'cancelled'}),{status:200,headers:{'content-type':'application/json'}});
+  }
   if(url==='/v1/session/logout'){
    if(window.__mode==='logoutFail') throw Error('network loss');
    if(window.__mode==='logoutHung')return new Promise(()=>{});
@@ -40,6 +55,7 @@ STUB=r'''async controllerUrl => {
    if(window.__mode==='logoutOversize')return new Response('X'.repeat(2048),{status:200,headers:{'content-type':'application/json'}});
    return new Response(JSON.stringify({status:'signed_out'}),{status:200,headers:{'content-type':'application/json'}});
   }
+  if(window.__mode==='challenge'&&!window.__redeemed)return new Response('',{status:401});
   if(window.__mode==='unauthorized')return new Response('',{status:401});
   if(window.__mode==='down')return new Response('',{status:503});
   if(window.__mode==='hung')return new Promise(resolve=>{window.__resolveHung=resolve;});
