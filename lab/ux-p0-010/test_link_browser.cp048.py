@@ -1,0 +1,47 @@
+"""CP048 Chromium: source-real link UI over in-page synthetic fetch. No actual HTTPS cookies."""
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+import test_preview as lab
+checks=[]
+def check(label,passed):
+ checks.append((label,bool(passed)))
+ if not passed: print('FAIL',label,flush=True)
+def click(page,action): page.locator(f'button[data-action="{action}"]').first.click()
+with sync_playwright() as p:
+ browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
+ try:
+  page=lab.setup(browser,'challenge',390)
+  check('Unauthenticated view exposes voluntary challenge action',page.locator('button[data-action="link-start"]').count()==1)
+  check('No session or player appears before challenge',page.locator('.metric').count()==0)
+  click(page,'link-start')
+  page.wait_for_function("window.__ui.link.getState().phase==='issued'",timeout=2500)
+  check('Displays exactly one server-issued temporary code',page.locator('#link-code').inner_text()=='ABCD-EFGH-JKLM')
+  check('Instructions require private confirmation outside browser','confirme' in page.locator('.link-panel').inner_text().lower())
+  click(page,'link-check');page.wait_for_function("window.__ui.link.getState().phase==='pending'",timeout=2500)
+  check('Pending is not interpreted as authenticated',page.locator('.metric').count()==0)
+  page.evaluate('window.__privateApproved=true')
+  click(page,'link-check');page.wait_for_function("window.__ui.link.getState().phase==='approved'",timeout=2500)
+  check('Approved is not authenticated until session cookie and own-read',page.locator('.metric').count()==0)
+  click(page,'link-redeem');lab.ready(page,'profile')
+  page.wait_for_function("window.__ui.link.getState().phase==='linked'",timeout=2500)
+  check('After redeem/own-read, profile level visible',page.locator('.metric').filter(has_text='Nível').count()==1)
+  check('Temporary challenge removed after successful redemption',page.locator('#link-code').count()==0)
+  check('All challenge requests use same-origin and no explicit Cookie',page.evaluate("window.__calls.filter(x=>x.url.startsWith('/v1/link/')).every(x=>x.credentials==='same-origin'&&x.cache==='no-store'&&!('Cookie' in x.headers)&&!('Authorization' in x.headers))"))
+  check('Navigation now shows own inventory',page.locator('button[data-action="inventory"]').count()>=1)
+  check('390px browser has no overflow',lab.no_overflow(page))
+  click(page,'forget')
+  page.wait_for_function("!window.__ui.reader.getState().authorized && window.__ui.link.getState().phase==='idle'",timeout=2500)
+  check('Logout allows safe new challenge without reloading',page.locator('button[data-action="link-start"]').count()==1)
+  check('Logout clears the prior challenge state',page.locator('#link-code').count()==0)
+  page.close()
+  cancel=lab.setup(browser,'challenge',320)
+  click(cancel,'link-start');cancel.wait_for_function("window.__ui.link.getState().phase==='issued'",timeout=2500)
+  click(cancel,'link-cancel');cancel.wait_for_function("window.__ui.link.getState().phase==='cancelled'",timeout=2500)
+  check('Cancel removes code from DOM and state',cancel.locator('#link-code').count()==0 and cancel.evaluate('window.__ui.link.getState().code===null'))
+  check('Cancelled challenge has not authenticated',cancel.locator('.metric').count()==0)
+  check('Cancel sends only cookie-bound POST',cancel.evaluate("window.__calls.at(-1).url==='/v1/link/cancel'&&window.__calls.at(-1).method==='POST'"))
+  check('320px no overflow',lab.no_overflow(cancel))
+  cancel.close()
+ finally: browser.close()
+print(f'CP048 Chromium linking checks {sum(ok for _,ok in checks)} / {len(checks)}')
+if not all(ok for _,ok in checks): raise SystemExit(1)
