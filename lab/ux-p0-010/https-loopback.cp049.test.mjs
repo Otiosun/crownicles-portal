@@ -172,3 +172,10 @@ test('CP049 public module import graph loads via HTTPS and private/server files 
   assert.equal(res.status,404,'private path must not be served: '+path);
  }
 });
+
+test('CP049 rejects same-IP mismatched port even when Host syntax is otherwise valid',async()=>{
+ const alternate=port===65535?1:port+1;
+ const r=await request('/v1/link/start',{method:'POST',originHeader:origin,host:`127.0.0.1:${alternate}`});
+ assert.equal(r.status,421);
+ assert.ok(!r.text.includes('issued'));
+});

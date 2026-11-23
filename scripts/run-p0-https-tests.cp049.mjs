@@ -16,4 +16,4 @@ run('openssl',['version']);
 run(process.execPath,['--test','lab/ux-p0-010/https-loopback.cp049.test.mjs']);
 const python=process.env.CP049_PYTHON??(process.platform==='win32'?'python':'python3');
 run(python,['lab/ux-p0-010/https-cookiejar.cp049.py'],{PYTHONDONTWRITEBYTECODE:'1'});
-console.log('CP049_HTTPS_PROTOCOL_GATE=PASS; NODE=11; PY_COOKIEJAR=4; BROWSER_TLS=NOT_TESTED');
+console.log('CP049_HTTPS_PROTOCOL_GATE=PASS; NODE=12; PY_COOKIEJAR=4; BROWSER_TLS=NOT_TESTED');
