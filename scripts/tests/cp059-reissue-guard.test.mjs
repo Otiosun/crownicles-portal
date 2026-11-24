@@ -107,24 +107,31 @@ test('CP059 unknown previous link is 409, clears only link cookie, does not expo
  assert.equal(Object.hasOwn(r.data,'code'),false);
  assert.ok(x.ledger.inspectSession(valid.sessionToken));
 });
+// Legacy CP061 gate pins the original test names; their bodies now assert
+// the stronger CP063 atomic rollback rather than a two-transaction compensation.
 test('CP059 exception during old-link cancellation compensates new code then returns 503',async t=>{
- const x=await setup(t),old=x.issue(),original=x.ledger.cancelChallenge.bind(x.ledger);
- x.ledger.cancelChallenge=secret=>secret===old.browserSecret?(()=>{throw Error('FAULT')})():original(secret);
- const before=countLive(x.ledger),r=await x.send('/v1/link/start',{link:old.browserSecret});
+ const x=await setup(t),old=x.issue();
+ const before=countLive(x.ledger),rate=x.ledger.db.prepare('SELECT attempts n FROM rate').get().n;
+ x.ledger.db.exec("CREATE TRIGGER cp063_abort_old BEFORE UPDATE OF state ON challenges WHEN NEW.state='revoked' BEGIN SELECT RAISE(ABORT,'CP063_INJECTED_FAILURE'); END");
+ const r=await x.send('/v1/link/start',{link:old.browserSecret});
  assert.equal(r.status,503);assert.equal(countLive(x.ledger),before);
+ assert.equal(x.ledger.challengeStatus(old.browserSecret).status,'pending');
+ assert.equal(x.ledger.db.prepare('SELECT attempts n FROM rate').get().n,rate);
  assert.equal(cookies(r).some(c=>c.startsWith(LINK+'=')),false);
 });
 test('CP059 unexpected cancel status cannot leave a newly active code',async t=>{
- const x=await setup(t),old=x.issue(),original=x.ledger.cancelChallenge.bind(x.ledger);
- x.ledger.cancelChallenge=secret=>secret===old.browserSecret?{status:'other'}:original(secret);
- const before=countLive(x.ledger),r=await x.send('/v1/link/start',{link:old.browserSecret});
+ const x=await setup(t),old=x.issue(),before=countLive(x.ledger);
+ x.ledger.reissueChallenge=()=>({status:'other'});
+ const r=await x.send('/v1/link/start',{link:old.browserSecret});
  assert.equal(r.status,409);assert.equal(countLive(x.ledger),before);
+ assert.equal(cookies(r).some(c=>c.startsWith(LINK+'=')),true);
 });
 test('CP059 failure to compensate must never emit success or a new cookie',async t=>{
- const x=await setup(t),old=x.issue();
- x.ledger.cancelChallenge=()=>({status:'unavailable'});
+ const x=await setup(t),old=x.issue(),before=countLive(x.ledger);
+ x.ledger.reissueChallenge=()=>{throw Error('CP063_FAULT')};
  const r=await x.send('/v1/link/start',{link:old.browserSecret});
  assert.equal(r.status,503);assert.equal(Object.hasOwn(r.data,'code'),false);
+ assert.equal(countLive(x.ledger),before);
  assert.equal(cookies(r).some(c=>c.startsWith(LINK+'=')),false);
 });
 test('CP059 201 result exposes neither actor nor internal binding or session credentials',async t=>{
