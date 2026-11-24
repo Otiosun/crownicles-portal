@@ -92,11 +92,36 @@ export function parseTapSummaries(output){
   o.fail!==0||o.cancelled!==0||o.skipped!==0||o.todo!==0)bad('CP055_TAP_NOT_ALL_EXECUTED');
  return Object.freeze(o);
 }
+// CP061: a larger aggregate count cannot replace the required CP059 cases.
+export const CP059_REQUIRED_CASES=Object.freeze([
+ "CP059 pending previous code is revoked only after successful replacement",
+ "CP059 approved previous code cannot redeem after replacement",
+ "CP059 consumed linked code cancels only its associated live session",
+ "CP059 legacy consumed link without association cannot be acknowledged as replaced",
+ "CP059 legacy failure cannot revoke an unrelated independent session",
+ "CP059 rate limiting does not revoke an old pending code",
+ "CP059 cross-origin attempt does not issue a replacement",
+ "CP059 unknown previous link is 409, clears only link cookie, does not expose code",
+ "CP059 exception during old-link cancellation compensates new code then returns 503",
+ "CP059 unexpected cancel status cannot leave a newly active code",
+ "CP059 failure to compensate must never emit success or a new cookie",
+ "CP059 201 result exposes neither actor nor internal binding or session credentials",
+ "CP059 migrated consumed legacy row persists across SQLite close/reopen and must fail closed",
+ "CP059 after 409 clears stale link, retry without cookie can issue exactly one valid code",
+ "CP059 link.start 409 never claims a fresh code nor a cancelled old link",
+ "CP059 retry after 409 can issue a new code after stale cookie was cleared",
+ "CP059 429 leaves frontend without invented code or false success",
+ "CP059 unverified 201 payload must never become a code"
+]);
 export function inspectLabEvidence(stage,output){
  if(!['p0','https','browser','preview'].includes(stage)||typeof output!=='string')bad('CP055_STAGE_INVALID');
  if(stage==='p0'){
   const result=parseTapSummaries(output);
-  if(result.tests<221)bad('CP055_P0_BASELINE_DROPPED');
+  if(result.tests<239)bad('CP055_P0_BASELINE_DROPPED');
+  const observed=[...output.matchAll(/^ *ok [0-9]+ - (.+)\r?$/gm)].map(m=>m[1]);
+  for(const name of CP059_REQUIRED_CASES){
+   if(observed.filter(value=>value===name).length!==1)bad('CP061_REQUIRED_CASE_MISSING_OR_DUPLICATE:'+name);
+  }
   return Object.freeze({stage,count:result.tests});
  }
  if(stage==='https'){
