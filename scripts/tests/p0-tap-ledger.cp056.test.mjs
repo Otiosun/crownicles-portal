@@ -35,6 +35,10 @@ test('CP056 refuses SKIP and TODO annotations even with forged summary pass=test
   assert.throws(()=>parseTapSummaries(fabricated),/TAP_NONPASS_RECORD/);
  }
 });
+test('CP056 accepts Windows-style CRLF TAP line endings',()=>{
+ const windows=normal.replace(/\n/g,'\r\n');
+ assert.equal(parseTapSummaries(windows).tests,210);
+});
 test('CP056 retains a valid 210-point flat Node ledger',()=>{
  assert.equal(tag('p0',normal).count,210);
 });
