@@ -8,7 +8,7 @@ import {spawnSync} from 'node:child_process';
 import {inspectLabEvidence,parseTapSummaries,runLabGate} from '../p0-lab-convergence.cp053.mjs';
 
 const tap=(n,{pass=n,fail=0,skipped=0,todo=0,cancelled=0}={})=>
-  `TAP version 13\nok 1 - fixture\n1..${n}\n# tests ${n}\n# pass ${pass}\n# fail ${fail}\n# cancelled ${cancelled}\n# skipped ${skipped}\n# todo ${todo}\n`;
+  `TAP version 13\n${Array.from({length:n},(_,i)=>`# Subtest: fixture-${i+1}\nok ${i+1} - fixture-${i+1}\n`).join('')}1..${n}\n# tests ${n}\n# pass ${pass}\n# fail ${fail}\n# cancelled ${cancelled}\n# skipped ${skipped}\n# todo ${todo}\n`;
 const browser=[
  'UX-P0-010 Chromium checks 46 / 46',
  'CP047 keyboard/accessibility-tree smoke: 10 / 10',
@@ -118,8 +118,8 @@ test('CP055 real npm subprocess smoke passes and rejects missing browser evidenc
 });
 
 test('CP055 TAP needs a version, a bounded plan and an executed test record',()=>{
- for(const invalid of [tap(210).replace('TAP version 13\n',''),tap(210).replace('1..210','1..999'),tap(210).replace('ok 1 - fixture\n','')])
-  assert.throws(()=>inspectLabEvidence('p0',invalid),/TAP_PLAN_MISSING_OR_INCONSISTENT/);
+ for(const invalid of [tap(210).replace('TAP version 13\n',''),tap(210).replace('1..210','1..999'),tap(210).replace('ok 1 - fixture-1\n','')])
+  assert.throws(()=>inspectLabEvidence('p0',invalid),/TAP_(?:PLAN_MISSING_OR_INCONSISTENT|RECORD_COUNT_MISMATCH)/);
 });
 
 test('CP055 refuses missing CP054/focus Chromium markers',()=>{
@@ -129,4 +129,21 @@ test('CP055 refuses missing CP054/focus Chromium markers',()=>{
 test('CP055 rejects skipped or missing HTTPS preview',()=>{
  assert.throws(()=>inspectLabEvidence('preview',''),/SUMMARY/);
  assert.throws(()=>inspectLabEvidence('preview',tap(1,{pass:0,skipped:1})),/NOT_ALL_EXECUTED/);
+});
+
+test('CP056 fails if TAP claims 210 passed but only one test record exists',()=>{
+ const fake='TAP version 13\n# Subtest: one\nok 1 - one\n1..210\n# tests 210\n# pass 210\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n';
+ assert.throws(()=>inspectLabEvidence('p0',fake),/CP056_TAP_RECORD_COUNT_MISMATCH/);
+});
+test('CP056 rejects duplicate ordinal, missing subtest and not-ok amidst green summary',()=>{
+ const canonical=tap(210);
+ assert.throws(()=>inspectLabEvidence('p0',canonical.replace('ok 110 - fixture-110','ok 109 - fixture-110')),/CP056_TAP_RECORD_ORDER_INVALID/);
+ assert.throws(()=>inspectLabEvidence('p0',canonical.replace('# Subtest: fixture-40\n','')),/CP056_TAP_RECORD_COUNT_MISMATCH/);
+ assert.throws(()=>inspectLabEvidence('p0',canonical.replace('ok 40 - fixture-40','not ok 40 - fixture-40')),/CP056_TAP_RECORD_ORDER_INVALID/);
+ assert.throws(()=>inspectLabEvidence('p0',canonical.replace('1..210','1..209')),/CP056_TAP_RECORD_COUNT_MISMATCH/);
+});
+test('CP056 accepts real flat TAP stream but rejects preview claim without matching record',()=>{
+ assert.equal(inspectLabEvidence('p0',tap(210)).count,210);
+ assert.equal(inspectLabEvidence('preview',tap(1)).count,1);
+ assert.throws(()=>inspectLabEvidence('preview',tap(1).replace('ok 1 - fixture-1','ok 9 - fixture-1')),/CP056_TAP_RECORD_ORDER_INVALID/);
 });
