@@ -35,8 +35,16 @@ export function parseTapSummaries(output){
  const o=Object.fromEntries(keys.map(k=>[k,parsed[k][0]]));
  const version=[...output.matchAll(/^TAP version 13\s*$/gm)];
  const plans=[...output.matchAll(/^1\.\.([0-9]+)\s*$/gm)];
- const topLevel=[...output.matchAll(/^ok ([0-9]+) - /gm)];
- if(version.length!==1||plans.length!==1||topLevel.length<1||Number(plans[0][1])<1||Number(plans[0][1])>o.tests)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
+ // This laboratory gate currently runs flat Node TAP v13 test files. A summary
+ // saying 210/210 is insufficient evidence if only one 'ok' actually exists.
+ // Reject a truncated/duplicated record stream even if npm exits zero.
+ const topLevel=[...output.matchAll(/^(ok|not ok) ([0-9]+) - [^\r\n]*$/gm)];
+ const details=[...output.matchAll(/^# Subtest: [^\r\n]*$/gm)];
+ if(version.length!==1||plans.length!==1||Number(plans[0][1])<1||Number(plans[0][1])>o.tests)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
+ if(Number(plans[0][1])!==o.tests||topLevel.length!==o.tests||details.length!==o.tests)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
+ for(let i=0;i<topLevel.length;i++){
+  if(topLevel[i][1]!=='ok'||Number(topLevel[i][2])!==i+1)bad('CP056_TAP_RECORD_ORDER_INVALID');
+ }
  if(keys.some(k=>!Number.isSafeInteger(o[k]))||o.tests<1||o.pass!==o.tests||
   o.fail!==0||o.cancelled!==0||o.skipped!==0||o.todo!==0)bad('CP055_TAP_NOT_ALL_EXECUTED');
  return Object.freeze(o);
