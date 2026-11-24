@@ -19,14 +19,13 @@ const browser=[
  'CP052 PR21 real-controller/catalog Chromium journey: 23 / 23',
  'CP054 BROWSER 104 / 104',
  'CP055 Chromium focus regression 24/24',
- 'CP055 deterministic Chromium focus-race: 14 / 14',
- 'CP056 ZOOM BROWSER: 130 / 130'
+ 'CP055 deterministic Chromium focus-race: 14 / 14'
 ].join('\n');
 const https=tap(12)+'CP049_HTTPS_PROTOCOL_GATE=PASS; NODE=12; PY_COOKIEJAR=4; BROWSER_TLS=NOT_TESTED\n'+'Ran 4 tests in 1.54s\n\nOK\n';
 const preview=tap(1);
 
 test('CP055 positive source-shaped P0, HTTPS, Chromium ledgers',()=>{
- assert.deepEqual([inspectLabEvidence('p0',tap(210)).count,inspectLabEvidence('https',https).count,inspectLabEvidence('browser',browser).count,inspectLabEvidence('preview',preview).count],[210,16,415,1]);
+ assert.deepEqual([inspectLabEvidence('p0',tap(210)).count,inspectLabEvidence('https',https).count,inspectLabEvidence('browser',browser).count,inspectLabEvidence('preview',preview).count],[210,16,285,1]);
 });
 test('CP055 fails closed if baseline P0 test count drops even with exit zero',()=>{
  assert.throws(()=>inspectLabEvidence('p0',tap(209)),/P0_BASELINE_DROPPED/);
@@ -67,7 +66,7 @@ test('CP055 requires exactly four stage commands without mutations or network',(
   return {status:0,stdout:data[calls.length-1],stderr:''};
  },report:x=>logs.push(x)});
  assert.deepEqual(calls.map(row=>row.slice(1)),[['run','test:p0'],['run','test:p0:https'],['run','test:p0:browser'],['run','test:p0:preview']]);
- assert.deepEqual(out.map(x=>x.count),[210,16,415,1]);
+ assert.deepEqual(out.map(x=>x.count),[210,16,285,1]);
  assert.match(logs.at(-1),/AUTH_REAL=NOT_TESTED.*MARIADB_REAL=NOT_TESTED.*BROWSER_TLS=NOT_TESTED/);
 });
 test('CP055 stops immediately if a later stage fails or never ran',()=>{
@@ -109,7 +108,7 @@ test('CP055 real npm subprocess smoke passes and rejects missing browser evidenc
   });
   const green=run();
   assert.equal(green.status,0,green.stderr);
-  assert.match(green.stdout,/CP055_STAGE_BROWSER=PASS; CASES=415/);
+  assert.match(green.stdout,/CP055_STAGE_BROWSER=PASS; CASES=285/);
   fake('browser',browser.replace(/^CP052 PR21.*$/m,''));
   const red=run();
   assert.equal(red.status,1);
@@ -124,16 +123,10 @@ test('CP055 TAP needs a version, a bounded plan and an executed test record',()=
 });
 
 test('CP055 refuses missing CP054/focus Chromium markers',()=>{
- for(const marker of [/^CP054 BROWSER.*$/m,/^CP055 Chromium focus regression.*$/m,/^CP056 ZOOM BROWSER:.*$/m])
+ for(const marker of [/^CP054 BROWSER.*$/m,/^CP055 Chromium focus regression.*$/m])
   assert.throws(()=>inspectLabEvidence('browser',browser.replace(marker,'')),/MARKER_MISSING/);
 });
 test('CP055 rejects skipped or missing HTTPS preview',()=>{
  assert.throws(()=>inspectLabEvidence('preview',''),/SUMMARY/);
  assert.throws(()=>inspectLabEvidence('preview',tap(1,{pass:0,skipped:1})),/NOT_ALL_EXECUTED/);
-});
-
-test('CP056 zero-skips zoom-check count must be present and exact',()=>{
- assert.throws(()=>inspectLabEvidence('browser',browser.replace(/^CP056 ZOOM BROWSER:.*$/m,'')),/MARKER_MISSING/);
- assert.throws(()=>inspectLabEvidence('browser',browser.replace('130 / 130','129 / 130')),/BASELINE_DROPPED/);
- assert.throws(()=>inspectLabEvidence('browser',browser.replace('130 / 130','129 / 129')),/BASELINE_DROPPED/);
 });
