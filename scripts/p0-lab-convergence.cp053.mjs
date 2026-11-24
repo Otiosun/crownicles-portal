@@ -35,16 +35,44 @@ export function parseTapSummaries(output){
  const o=Object.fromEntries(keys.map(k=>[k,parsed[k][0]]));
  const version=[...output.matchAll(/^TAP version 13\s*$/gm)];
  const plans=[...output.matchAll(/^1\.\.([0-9]+)\s*$/gm)];
- // This laboratory gate currently runs flat Node TAP v13 test files. A summary
- // saying 210/210 is insufficient evidence if only one 'ok' actually exists.
- // Reject a truncated/duplicated record stream even if npm exits zero.
- const topLevel=[...output.matchAll(/^(ok|not ok) ([0-9]+) - [^\r\n]*$/gm)];
- const details=[...output.matchAll(/^# Subtest: [^\r\n]*$/gm)];
- if(version.length!==1||plans.length!==1||Number(plans[0][1])<1||Number(plans[0][1])>o.tests)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
- if(Number(plans[0][1])!==o.tests||topLevel.length!==o.tests||details.length!==o.tests)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
- for(let i=0;i<topLevel.length;i++){
-  if(topLevel[i][1]!=='ok'||Number(topLevel[i][2])!==i+1)bad('CP056_TAP_RECORD_ORDER_INVALID');
+ // Node TAP v13 counts every nested test in `# tests`, while the final
+ // root plan counts only top-level tests. Reconcile every `# Subtest` with
+ // its `ok N - title`, then verify each indentation scope's 1..N plan.
+ // This detects truncated or duplicated case records even with a forged
+ // `# tests 210 / # pass 210` summary and exit zero. This is NOT a signature.
+ if(version.length!==1||plans.length<1)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
+ const declarations=new Map(),results=new Map(),pending=new Map();
+ let allResults=0,rootPlans=0;
+ const append=(map,indent,value)=>{if(!map.has(indent))map.set(indent,[]);map.get(indent).push(value)};
+ for(const line of output.split(/\r?\n/)){
+  const sub=/^( *)# Subtest: (.+)$/.exec(line);
+  const rec=/^( *)(ok|not ok) ([0-9]+) - (.+)$/.exec(line);
+  const plan=/^( *)1\.\.([0-9]+)\s*$/.exec(line);
+  if(!sub&&!rec&&!plan)continue;
+  const indent=(sub??rec??plan)[1].length;
+  if(indent%4!==0)bad('CP056_TAP_INDENT_INVALID');
+  if(sub)append(declarations,indent,sub[2]);
+  if(rec){
+   allResults++;
+   append(results,indent,{name:rec[4],status:rec[2]});
+   append(pending,indent,{number:Number(rec[3]),status:rec[2]});
+  }
+  if(plan){
+   const count=Number(plan[2]),entries=pending.get(indent)||[];
+   if(!Number.isSafeInteger(count)||count<1||entries.length!==count)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
+   for(let i=0;i<count;i++)if(entries[i].status!=='ok'||entries[i].number!==i+1)bad('CP056_TAP_RECORD_ORDER_INVALID');
+   pending.delete(indent);
+   if(indent===0)rootPlans++;
+  }
  }
+ if(rootPlans!==1||pending.size||allResults!==o.tests)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
+ let declarationCount=0;
+ for(const [indent,decl] of declarations){
+  declarationCount+=decl.length;
+  const observed=results.get(indent)||[];
+  if(observed.length!==decl.length||decl.some((name,i)=>name!==observed[i].name))bad('CP056_TAP_RECORD_PAIR_MISMATCH');
+ }
+ if(declarationCount!==o.tests||[...results.keys()].some(indent=>!declarations.has(indent)))bad('CP056_TAP_RECORD_COUNT_MISMATCH');
  if(keys.some(k=>!Number.isSafeInteger(o[k]))||o.tests<1||o.pass!==o.tests||
   o.fail!==0||o.cancelled!==0||o.skipped!==0||o.todo!==0)bad('CP055_TAP_NOT_ALL_EXECUTED');
  return Object.freeze(o);
