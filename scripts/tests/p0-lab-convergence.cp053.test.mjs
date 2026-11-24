@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,copyFileSync,writeFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,copyFileSync,writeFileSync,rmSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -238,4 +238,16 @@ test('CP061 requires every CP059 result exactly once even with sufficient aggreg
  }
  assert.throws(()=>inspectLabEvidence('p0',valid.replaceAll(CP059_REQUIRED_CASES[1],CP059_REQUIRED_CASES[0])),/CP061_REQUIRED_CASE_MISSING_OR_DUPLICATE/);
  assert.equal(inspectLabEvidence('p0',valid.replaceAll('\n','\r\n')).count,239);
+});
+
+test('CP061 required names and runner stay synchronized with the two actual CP059 test files',()=>{
+ const paths=['scripts/tests/cp059-reissue-guard.test.mjs','scripts/tests/cp059-client-reissue.test.mjs'];
+ const root=new URL('../../',import.meta.url);
+ const runner=readFileSync(new URL('scripts/run-p0-tests.mjs',root),'utf8');
+ const names=paths.flatMap(path=>{
+  assert.equal(runner.split("'"+path+"'").length,2);
+  return [...readFileSync(new URL(path,root),'utf8').matchAll(/^test\('([^']+)'/gm)].map(m=>m[1]);
+ });
+ assert.equal(names.length,18);
+ assert.deepEqual(names,CP059_REQUIRED_CASES);
 });
