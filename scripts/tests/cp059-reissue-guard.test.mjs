@@ -154,3 +154,16 @@ test('CP059 migrated consumed legacy row persists across SQLite close/reopen and
  assert.equal(r.status,409);assert.equal(countLive(x.ledger),before);
  assert.ok(x.ledger.inspectSession(session.sessionToken),'no false revocation acknowledgement');
 });
+
+test('CP059 after 409 clears stale link, retry without cookie can issue exactly one valid code',async t=>{
+ const x=await setup(t),stale=randomBytes(32).toString('base64url');
+ const bad=await x.send('/v1/link/start',{link:stale});
+ assert.equal(bad.status,409);
+ assert.ok(cookies(bad).some(c=>c.startsWith(LINK+'=;')&&c.includes('Max-Age=0')&&c.includes('Secure')&&c.includes('HttpOnly')&&c.includes('SameSite=Strict')));
+ assert.equal(countLive(x.ledger),0,'failed replacement left no live challenge');
+ const good=await x.send('/v1/link/start');
+ assert.equal(good.status,201);assert.equal(good.data.status,'issued');
+ assert.match(good.data.code,/^[2-9A-HJ-NP-Z]{4}(?:-[2-9A-HJ-NP-Z]{4}){2}$/);
+ assert.equal(countLive(x.ledger),1,'retry created one usable challenge');
+ assert.ok(cookies(good).some(c=>c.startsWith(LINK+'=')&&c.includes('Secure')&&c.includes('SameSite=Strict')));
+});
