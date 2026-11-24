@@ -41,6 +41,10 @@ export function parseTapSummaries(output){
  // This detects truncated or duplicated case records even with a forged
  // `# tests 210 / # pass 210` summary and exit zero. This is NOT a signature.
  if(version.length!==1||plans.length<1)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
+ const suites=[...output.matchAll(/^# suites ([0-9]+)\s*$/gm)];
+ const suiteCount=suites.length===1?Number(suites[0][1]):suites.length===0?0:NaN;
+ if(!Number.isSafeInteger(suiteCount)||suiteCount<0)bad('CP056_TAP_SUITE_SUMMARY_INVALID');
+ const expectedRecords=o.tests+suiteCount;
  const declarations=new Map(),results=new Map(),pending=new Map();
  const open=[];
  let allResults=0,rootPlans=0;
@@ -75,14 +79,14 @@ export function parseTapSummaries(output){
    if(indent===0)rootPlans++;
   }
  }
- if(rootPlans!==1||open.length||pending.size||allResults!==o.tests)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
+ if(rootPlans!==1||open.length||pending.size||allResults!==expectedRecords)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
  let declarationCount=0;
  for(const [indent,decl] of declarations){
   declarationCount+=decl.length;
   const observed=results.get(indent)||[];
   if(observed.length!==decl.length||decl.some((name,i)=>name!==observed[i].name))bad('CP056_TAP_RECORD_PAIR_MISMATCH');
  }
- if(declarationCount!==o.tests||[...results.keys()].some(indent=>!declarations.has(indent)))bad('CP056_TAP_RECORD_COUNT_MISMATCH');
+ if(declarationCount!==expectedRecords||[...results.keys()].some(indent=>!declarations.has(indent)))bad('CP056_TAP_RECORD_COUNT_MISMATCH');
  if(keys.some(k=>!Number.isSafeInteger(o[k]))||o.tests<1||o.pass!==o.tests||
   o.fail!==0||o.cancelled!==0||o.skipped!==0||o.todo!==0)bad('CP055_TAP_NOT_ALL_EXECUTED');
  return Object.freeze(o);
