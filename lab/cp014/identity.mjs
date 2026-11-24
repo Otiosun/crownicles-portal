@@ -22,6 +22,7 @@ export class IdentityLedger {
   CREATE TABLE IF NOT EXISTS bindings(ref TEXT PRIMARY KEY, actor TEXT UNIQUE, epoch INTEGER NOT NULL CHECK(epoch>0));
   CREATE TABLE IF NOT EXISTS challenges(browser TEXT PRIMARY KEY, code TEXT UNIQUE NOT NULL, state TEXT NOT NULL CHECK(state IN ('pending','awaiting','approved','consumed','revoked')), created INTEGER NOT NULL, expires INTEGER NOT NULL, ref TEXT, actor TEXT, epoch INTEGER, approval TEXT UNIQUE, approval_expires INTEGER);
   CREATE TABLE IF NOT EXISTS sessions(secret TEXT PRIMARY KEY, ref TEXT NOT NULL, actor TEXT NOT NULL, epoch INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, revoked INTEGER NOT NULL DEFAULT 0 CHECK(revoked IN (0,1)));
+  CREATE TABLE IF NOT EXISTS challenge_sessions(browser TEXT PRIMARY KEY REFERENCES challenges(browser) ON DELETE CASCADE, secret TEXT UNIQUE NOT NULL REFERENCES sessions(secret) ON DELETE CASCADE);
   CREATE INDEX IF NOT EXISTS challenges_ref ON challenges(ref,state);
   CREATE INDEX IF NOT EXISTS sessions_ref ON sessions(ref,revoked);
   CREATE TABLE IF NOT EXISTS rate(scope TEXT NOT NULL, operation TEXT NOT NULL, window INTEGER NOT NULL, attempts INTEGER NOT NULL, PRIMARY KEY(scope,operation,window));`);
@@ -61,9 +62,24 @@ export class IdentityLedger {
  confirmApproval(approvalNonce,ctx){return this.tx(()=>{let now=this.now();if(!this.privateContext(ctx)||ctx.confirmed!==true)return invalid();if(!this.limit(ctx.ref,'confirm',now,8))return {status:'rate_limited'};if(!TOKEN.test(approvalNonce??''))return invalid();
   let r=this.db.prepare("UPDATE challenges SET state='approved' WHERE approval=? AND state='awaiting' AND ref=? AND actor=? AND epoch=? AND expires>? AND approval_expires>?").run(this.digest('approval',approvalNonce),ctx.ref,ctx.actor,ctx.epoch,now,now);return r.changes===1?{status:'approved'}:invalid();});}
  challengeStatus(browserSecret){if(!TOKEN.test(browserSecret??''))return invalid();let n=this.now(),r=this.db.prepare('SELECT state,expires,ref,actor,epoch,approval_expires FROM challenges WHERE browser=?').get(this.digest('browser',browserSecret));if(!r||r.expires<=n||!['pending','awaiting','approved'].includes(r.state))return invalid();if(r.state!=='pending'&&!this.current(r.ref,r.actor,r.epoch))return invalid();if(r.state==='awaiting'&&r.approval_expires<=n)return invalid();return {status:r.state==='awaiting'?'awaiting_confirmation':r.state,expiresAt:r.expires}}
- cancelChallenge(browserSecret){if(!TOKEN.test(browserSecret??''))return invalid();return this.tx(()=>{let r=this.db.prepare("UPDATE challenges SET state='revoked' WHERE browser=? AND state IN ('pending','awaiting','approved')").run(this.digest('browser',browserSecret));return r.changes===1?{status:'cancelled'}:invalid();});}
+ // A consumed challenge may have issued a session whose cookie has not arrived yet.
+ // Cancel only the session minted by this exact browser challenge, atomically.
+ cancelChallenge(browserSecret){if(!TOKEN.test(browserSecret??''))return invalid();return this.tx(()=>{
+   const browser=this.digest('browser',browserSecret),row=this.db.prepare('SELECT state FROM challenges WHERE browser=?').get(browser);
+   if(!row)return invalid();
+   if(row.state==='revoked')return {status:'cancelled'};
+   if(row.state==='consumed'){
+    const link=this.db.prepare('SELECT secret FROM challenge_sessions WHERE browser=?').get(browser);
+    // Legacy consumed rows have no linkage: never claim successful revocation.
+    if(!link)return invalid();
+    this.db.prepare('UPDATE sessions SET revoked=1 WHERE secret=?').run(link.secret);
+   }
+   const changed=this.db.prepare("UPDATE challenges SET state='revoked' WHERE browser=? AND state IN ('pending','awaiting','approved','consumed')").run(browser);
+   if(changed.changes!==1)throw Error('CHALLENGE_CANCEL_CONFLICT');
+   return {status:'cancelled'};
+  });}
  redeem(browserSecret){if(!TOKEN.test(browserSecret??''))return invalid();return this.tx(()=>{let now=this.now(),digest=this.digest('browser',browserSecret);let r=this.db.prepare("SELECT * FROM challenges WHERE browser=? AND state='approved' AND expires>?").get(digest,now);if(!r||!this.current(r.ref,r.actor,r.epoch))return invalid();
-   let changed=this.db.prepare("UPDATE challenges SET state='consumed',approval=NULL WHERE browser=? AND state='approved' AND expires>?").run(digest,now);if(changed.changes!==1)return invalid();let session=token(),expires=now+SESSION_MS;this.db.prepare('INSERT INTO sessions(secret,ref,actor,epoch,created,expires) VALUES(?,?,?,?,?,?)').run(this.digest('session',session),r.ref,r.actor,r.epoch,now,expires);return {status:'redeemed',sessionToken:session,expiresAt:expires};});}
+   let changed=this.db.prepare("UPDATE challenges SET state='consumed',approval=NULL WHERE browser=? AND state='approved' AND expires>?").run(digest,now);if(changed.changes!==1)return invalid();let session=token(),expires=now+SESSION_MS;this.db.prepare('INSERT INTO sessions(secret,ref,actor,epoch,created,expires) VALUES(?,?,?,?,?,?)').run(this.digest('session',session),r.ref,r.actor,r.epoch,now,expires);this.db.prepare('INSERT INTO challenge_sessions(browser,secret) VALUES(?,?)').run(digest,this.digest('session',session));return {status:'redeemed',sessionToken:session,expiresAt:expires};});}
  // Internal verifier only; result must not be sent to browser.
  inspectSession(sessionToken){if(!TOKEN.test(sessionToken??''))return null;let r=this.db.prepare('SELECT s.ref,s.actor,s.epoch,s.expires FROM sessions s JOIN bindings b ON b.ref=s.ref AND b.actor=s.actor AND b.epoch=s.epoch WHERE s.secret=? AND s.revoked=0 AND s.expires>?').get(this.digest('session',sessionToken),this.now());return r?{bindingRef:r.ref,actorId:r.actor,expiresAt:r.expires,bindingEpoch:r.epoch}:null}
  verifySession(sessionToken){let r=this.inspectSession(sessionToken);if(!r)return null;let {bindingRef,...out}=r;return out}

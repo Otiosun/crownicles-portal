@@ -21,7 +21,8 @@ const browserMarkers=Object.freeze([
  ['CP052 PR21 real-controller/catalog Chromium journey:',23],
  ['CP054 BROWSER',104],
  ['CP055 Chromium focus regression',24],
- ['CP055 deterministic Chromium focus-race:',14]
+ ['CP055 deterministic Chromium focus-race:',14],
+ ['CP056 ZOOM BROWSER:',130]
 ]);
 const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const bad=(code)=>{throw Error(code)};
@@ -35,8 +36,58 @@ export function parseTapSummaries(output){
  const o=Object.fromEntries(keys.map(k=>[k,parsed[k][0]]));
  const version=[...output.matchAll(/^TAP version 13\s*$/gm)];
  const plans=[...output.matchAll(/^1\.\.([0-9]+)\s*$/gm)];
- const topLevel=[...output.matchAll(/^ok ([0-9]+) - /gm)];
- if(version.length!==1||plans.length!==1||topLevel.length<1||Number(plans[0][1])<1||Number(plans[0][1])>o.tests)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
+ // Node TAP v13 counts every nested test in `# tests`, while the final
+ // root plan counts only top-level tests. Reconcile every `# Subtest` with
+ // its `ok N - title`, then verify each indentation scope's 1..N plan.
+ // This detects truncated or duplicated case records even with a forged
+ // `# tests 210 / # pass 210` summary and exit zero. This is NOT a signature.
+ if(version.length!==1||plans.length<1)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
+ const suites=[...output.matchAll(/^# suites ([0-9]+)\s*$/gm)];
+ const suiteCount=suites.length===1?Number(suites[0][1]):suites.length===0?0:NaN;
+ if(!Number.isSafeInteger(suiteCount)||suiteCount<0)bad('CP056_TAP_SUITE_SUMMARY_INVALID');
+ const expectedRecords=o.tests+suiteCount;
+ const declarations=new Map(),results=new Map(),pending=new Map();
+ const open=[];
+ let allResults=0,rootPlans=0;
+ const append=(map,indent,value)=>{if(!map.has(indent))map.set(indent,[]);map.get(indent).push(value)};
+ for(const line of output.split(/\r?\n/)){
+  const sub=/^( *)# Subtest: (.+)$/.exec(line);
+  const rec=/^( *)(ok|not ok) ([0-9]+) - (.+)$/.exec(line);
+  const plan=/^( *)1\.\.([0-9]+)\s*$/.exec(line);
+  if(!sub&&!rec&&!plan)continue;
+  const indent=(sub??rec??plan)[1].length;
+  if(indent%4!==0)bad('CP056_TAP_INDENT_INVALID');
+  if(sub){
+   const parent=open.at(-1);
+   if(parent ? indent!==parent.indent+4 : indent!==0)bad('CP056_TAP_NESTING_INVALID');
+   open.push({indent,name:sub[2]});
+   append(declarations,indent,sub[2]);
+  }
+  if(rec){
+   const current=open.at(-1);
+   if(!current||current.indent!==indent||current.name!==rec[4]||
+     [...pending.keys()].some(d=>d>indent))bad('CP056_TAP_NESTING_INVALID');
+   open.pop();allResults++;
+   append(results,indent,{name:rec[4],status:rec[2]});
+   append(pending,indent,{number:Number(rec[3]),status:rec[2]});
+  }
+  if(plan){
+   if(indent===0 ? open.length!==0 : open.at(-1)?.indent!==indent-4)bad('CP056_TAP_NESTING_INVALID');
+   const count=Number(plan[2]),entries=pending.get(indent)||[];
+   if(!Number.isSafeInteger(count)||count<1||entries.length!==count)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
+   for(let i=0;i<count;i++)if(entries[i].status!=='ok'||entries[i].number!==i+1)bad('CP056_TAP_RECORD_ORDER_INVALID');
+   pending.delete(indent);
+   if(indent===0)rootPlans++;
+  }
+ }
+ if(rootPlans!==1||open.length||pending.size||allResults!==expectedRecords)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
+ let declarationCount=0;
+ for(const [indent,decl] of declarations){
+  declarationCount+=decl.length;
+  const observed=results.get(indent)||[];
+  if(observed.length!==decl.length||decl.some((name,i)=>name!==observed[i].name))bad('CP056_TAP_RECORD_PAIR_MISMATCH');
+ }
+ if(declarationCount!==expectedRecords||[...results.keys()].some(indent=>!declarations.has(indent)))bad('CP056_TAP_RECORD_COUNT_MISMATCH');
  if(keys.some(k=>!Number.isSafeInteger(o[k]))||o.tests<1||o.pass!==o.tests||
   o.fail!==0||o.cancelled!==0||o.skipped!==0||o.todo!==0)bad('CP055_TAP_NOT_ALL_EXECUTED');
  return Object.freeze(o);
@@ -45,7 +96,7 @@ export function inspectLabEvidence(stage,output){
  if(!['p0','https','browser','preview'].includes(stage)||typeof output!=='string')bad('CP055_STAGE_INVALID');
  if(stage==='p0'){
   const result=parseTapSummaries(output);
-  if(result.tests<210)bad('CP055_P0_BASELINE_DROPPED');
+  if(result.tests<221)bad('CP055_P0_BASELINE_DROPPED');
   return Object.freeze({stage,count:result.tests});
  }
  if(stage==='https'){

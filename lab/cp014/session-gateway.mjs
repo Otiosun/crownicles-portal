@@ -23,7 +23,7 @@ export function createSessionHandler({ledger,authority,repo,rateScopeFor,origin=
    let cookies;try{cookies=parsedCookies(req)}catch{return send(400,{error:'invalid_request'})}let link=cookies[LINK],session=cookies[SESSION];
    if(path==='/v1/link/start'){let scope=await rateScopeFor(req),c=ledger.issueChallenge(scope);if(c.status==='rate_limited')return send(429,{status:c.status});if(link)ledger.cancelChallenge(link);return send(201,{status:'issued',code:c.code,expiresAt:c.expiresAt},[cookie(LINK,c.browserSecret,(c.expiresAt-clock())/1000)]);}
    if(path==='/v1/link/status')return send(200,ledger.challengeStatus(link));
-   if(path==='/v1/link/cancel'){ledger.cancelChallenge(link);return send(200,{status:'cancelled'},[cookie(LINK,'',0)])}
+   if(path==='/v1/link/cancel'){const cancelled=ledger.cancelChallenge(link);return cancelled.status==='cancelled'?send(200,{status:'cancelled'},[cookie(LINK,'',0)]):send(409,{status:'unavailable'},[cookie(LINK,'',0)])}
    if(path==='/v1/link/redeem'){
     let approved=ledger.inspectApprovedChallenge(link);if(!approved||!await authorityMatches(authority,approved))return send(401,{status:'unavailable'});
     let r=ledger.redeem(link);if(r.status!=='redeemed')return send(401,{status:'unavailable'});
