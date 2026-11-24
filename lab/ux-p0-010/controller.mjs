@@ -49,7 +49,7 @@ const statusLabel=(section,state)=>{
    case 'idle':return message('Nenhuma consulta realizada',`A leitura de ${label} ainda não começou.`);
    case 'loading':return message('Leitura em andamento',`Consultando ${label}…`);
    case 'restricted':return message('Acesso restrito',`Não é possível apresentar ${label} nesta sessão.`);
-   case 'not_initialized':return message('Ainda não preparado',`O jogo ainda não preparou ${label} para consulta.`);
+   case 'not_initialized':return message('Ainda não preparado',`O jogo ainda não preparou ${label} para consulta.`, 'retry');
    default:return message('Serviço indisponível',`A consulta de ${label} não foi concluída.`, 'retry');
   }
 };
