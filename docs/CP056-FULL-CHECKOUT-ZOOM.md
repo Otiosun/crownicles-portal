@@ -1,36 +1,36 @@
-# CP056 — checkout integral PR30, acessibilidade 200% e gate de regressão
+# CP056 — checkout integral PR30, inspeção a 200% e QA isolada
 
-**Status:** DRAFT empilhado sobre a PR #30 (HEAD base fixo `a4a55f37ac9f858afdae9ed58bcd79377b32f527`). Não é aprovação de interface, autenticação nem release.
+**Status:** DRAFT empilhado sobre a PR #30 (base exata `a4a55f37ac9f858afdae9ed58bcd79377b32f527`). Esta PR altera **somente três paths**: `lab/ux-p0-010/preview.html`, `lab/ux-p0-010/test_zoom_overflow.cp056.py` e esta documentação. NÃO modificar `package.json` nem o gate TAP; estes arquivos têm dono em outra frente, PR #32, com trabalho concorrente PR #34.
 
-## 1. Prova de checkout integral
+## 1. Checkout integral comprovado
 
-Não foi possível usar `git clone` (resolução de `github.com` indisponível neste executor). Foi obtida a árvore Git via API, recursivamente, no commit exato da PR #30: **132 blobs, sem truncamento**. Todos os 132 conteúdos foram obtidos da API do GitHub; arquivos WebP também foram transferidos como bytes originais, e a comparação `SHA-1("blob "+length+"\\0"+bytes)` coincidiu com o manifesto da árvore **132/132**. O ZIP CP049 original foi usado apenas como ponto de partida; todos os arquivos foram sobrepostos e conferidos por blob, sem assumir que fontes parciais fossem o checkout completo.
+Sem DNS externo para `git clone`, a API do GitHub foi usada para obter o Git tree recursivo no commit pinado da PR #30: **132 blobs, sem truncamento**. Conteúdo integral transferido com base64, incluindo seis imagens WebP, confrontado com o hash Git de cada arquivo: **132/132**. O ZIP CP049 anterior foi apenas um ponto de partida; todos os bytes finais foram confrontados com a árvore atual. Não chamar esse processo de clone Git normal.
 
-Na árvore intacta da PR #30, com Node **22.16.0**, `npm run check` terminou em **exit 0**: `test:web` 43/43; `test:integration` 24/24; `test:tools` 75/75; `test:p0` 210/210 (**352** testes, 0 falhas, 0 skips). `npm run gate:p0:lab` terminou **exit 0**: Node 210; HTTPS 12 Node +4 Python; Chromium 285; preview HTTPS de laboratório 1 (**512** contagens de verificações heterogêneas). É execução contra checkout funcional integral; não CI remoto.
+Nessa árvore antes do patch, com Node **22.16.0**:
+- `npm run check`: **352/352** (web43 +integration24 +tools75 +P0 210), 0 fail/skip; exit 0.
+- `npm run gate:p0:lab`: **210 Node +16 HTTPS (12 Node, 4 Python) +285 Chromium +1 preview TLS sintética =512** verificações heterogêneas, exit 0. A CI GitHub real permanece pré-runner.
 
-## 2. Defeito de responsividade demonstrado
+## 2. Defeito reproduzido no navegador
 
-No controlador P0 de laboratório real e seu HTML `lab/ux-p0-010/preview.html`, a tela `Pertences → Inspecionar item` ultrapassava o viewport de **320 px** com fonte ampliada a **200%**: `scrollWidth=333`, `innerWidth=320`. A causa visual é o texto longo sem pontos de quebra na mensagem informativa, não uma falha do filtro ou da autorização.
+No controlador ESM de laboratório exato da PR30, em `Pertences → Inspecionar item`, viewport **320px** com texto **200%** apresentou `document.documentElement.scrollWidth=333`, maior que a largura 320. A causa: texto longo no aviso de inspeção sem quebra suficiente.
 
-Correção mínima: acrescentar somente `overflow-wrap:anywhere` à regra CSS `.message`. Não muda textos, atributos nativos, leitores, sessão, foco, API ou estado. A saída após a alteração voltou a `scrollWidth=320`.
+Patch único: acrescentar `overflow-wrap:anywhere` à regra CSS `.message` em `preview.html`. Os mesmos campos, dados, filtros, atribuição de foco, autenticação e APIs permanecem intactos; após o patch, `scrollWidth=320` no mesmo cenário.
 
-## 3. Regressão causal e suíte adicionada
+## 3. Teste RED/GREEN verificável
 
-Novo `python lab/ux-p0-010/test_zoom_overflow.cp056.py` (Playwright/Chromium) usa o controlador ESM **real** da PR #30 com o `test_preview.py` já existente, que fornece transporte de fixture exclusivamente sintético. Exercita 320/390/430/768/1440 px em 100% e 200%, percorrendo acesso não verificado, perfil, inventário, seleção, detalhes, retorno, quatro categorias e logout. Testa overflow do documento **e de descendentes**.
+Novo teste opt-in: `python lab/ux-p0-010/test_zoom_overflow.cp056.py`. O Chromium usa os módulos ESM reais do laboratório com o transporte sintético `test_preview.py`, sem usuário ou navegador HTTPS real.
 
-Com HTML **original e hash exato** `3ac5cb71638ff8cc722ad55179b9474dd3dcf688`: **RED 129/130**, exit 1, falha específica `320px/200%/detail`. Restaurado o CSS corrigido: **GREEN 130/130**, exit 0. Os demais 129 cenários permanecem verdes; 5 resoluções e ambas escalas preservadas.
+Cobertura: 320/390/430/768/1440 px, fonte 100%/200%, antes da verificação, perfil, inventário, seleção, detalhe, retorno, quatro categorias e logout; verifica overflow do documento **e dos descendentes** e ausência de detalhes privados depois do logout.
 
-O teste foi conectado ao `test:p0:browser` do `package.json`, e ao gate fail-closed no manifesto `scripts/p0-lab-convergence.cp053.mjs` como `CP056 ZOOM BROWSER:` exigindo **>=130/130**. O verificador rejeita marcador ausente, 129/130 e contagem reduzida 129/129. Suíte do próprio gate: **18/18** Node PASS, sem skip.
+- Original `preview.html` Git blob `3ac5cb71638ff8cc722ad55179b9474dd3dcf688`: **RED 129/130**, exit1, somente `320px/200%/detail` falhou.
+- Corrigido Git blob `e7d407acb43d7e140074a4a6f79c692977ddcb3f`: **GREEN 130/130**, exit0, 0 fails/skips; teste novo Git blob `67da039c66f87aa7d2cbbc79fda1e8d10fc3a22f` corresponde aos bytes testados.
 
-## 4. Provas pós-correção
+Na árvore íntegra com o patch CSS e teste Python, `npm run check` e `npm run gate:p0:lab` permanecem aprovados com os mesmos **352/512** baselines do commit base. O teste CP056 é **executado separadamente**, não se anuncia que o gate já contabiliza os 130 checks.
 
-Na árvore **com os deltas da CP056**:
-- `npm run check`: **353/353** no total (43 web +24 integration +76 tools +210 P0), zero falhas/skips, exit 0.
-- `npm run gate:p0:lab`: **642** contagens agregadas, Node 210 + HTTPS 16 + Chromium **415** (285 originais +130 CP056) + preview sintética 1, exit 0. Não interpretar 642 como testes nativos de produção.
-- `git hash-object` dos cinco paths alterados/adicionados confrontado com GitHub antes do PR; nenhuma outra fonte alterada.
+## 4. Responsabilidade e integração
 
-## 5. Limites sem exceção
+PR #32 tem precedência sobre o motor TAP e suas regressões; PR #34 é trabalho concorrente na mesma área. Para impedir colisão, **quaisquer commits temporários locais de CP056 no `package.json` e no gate foram revertidos byte a byte ao SHA do commit base**. O diff final da PR35 não deve conter esses arquivos. O integrador/revisor poderá acrescentar a bateria CP056 ao manifesto Chromium após resolver PR32 vs PR34, exigindo marcador `CP056 ZOOM BROWSER: 130 / 130` e verificando o `npm run check` completo e o gate composto. Não reaplicar patches temporários do gate dessa frente.
 
-Esta prova não habilita Node24/TS6 do Core real, banco MariaDB CP027 (0/12), Keycloak/OIDC, confirmação WhatsApp oficial, sessões de jogadores, cookies SameSite/HttpOnly em **Chromium navegando HTTPS real**, runner CI do GitHub (jobs anteriores falharam **sem steps**) nem a aprovação artística ART01. Também não resolve AGPL, localização pt-BR ou diretrizes finais de marca. Testes de browser utilizam `page.set_content` e módulos reais com fixture, não uma sessão de jogador.
+## 5. Limites
 
-**Review exigida:** revisar os cinco paths restritos, executar `npm run check`, `npm run gate:p0:lab`, verificar 320 px + 200%, manter esta PR empilhada na PR30 DRAFT sem merger cego nem deploy. Não tocar main, Base40, bot, WA, dados, banco, Core ou CI.
+Sem execução de Core Node24/TS6 nativo, MariaDB CP027 (0/12), Keycloak/OIDC, confirmação WhatsApp oficial, cookies de navegador HTTPS com SameSite/HttpOnly verificados, runner CI com steps, licença/pt-BR e ART01 aprovado. Esta é validação de laboratório com controlador real e dados sintéticos, não certificação produtiva. Não tocar main, Core, bot, WA, DB, jogadores ou deploy.
