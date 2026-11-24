@@ -54,6 +54,21 @@ test('CP056 understands actual nested Node TAP with subtests and root plan',()=>
   assert.equal(parsed.pass,5);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+test('CP056 accepts real Node describe() suites, which are not counted as tests',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'cp056-suite-'));
+ try{
+  const entry=join(dir,'suite.mjs');
+  writeFileSync(entry,`import {describe,it} from 'node:test';\n`+
+   `describe('suite',()=>{it('first',()=>{});it('second',()=>{});});\n`);
+  const {NODE_TEST_CONTEXT: _nestedTestContext,...env}=process.env;
+  const run=spawnSync(process.execPath,['--test',entry],{encoding:'utf8',timeout:12000,env});
+  assert.equal(run.status,0,run.stderr);
+  assert.match(run.stdout,/^# suites 1$/m);
+  const result=parseTapSummaries(run.stdout);
+  assert.equal(result.tests,2);
+  assert.equal(result.pass,2);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 test('CP056 fake gate cannot report PASS if P0 summary invents executed records',()=>{
  const stdout=summary(210,['ok 1 - only test']);
  const messages=[];
