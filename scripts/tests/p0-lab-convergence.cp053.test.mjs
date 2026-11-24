@@ -147,3 +147,30 @@ test('CP056 accepts real flat TAP stream but rejects preview claim without match
  assert.equal(inspectLabEvidence('preview',tap(1)).count,1);
  assert.throws(()=>inspectLabEvidence('preview',tap(1).replace('ok 1 - fixture-1','ok 9 - fixture-1')),/CP056_TAP_RECORD_ORDER_INVALID/);
 });
+
+
+test('CP056 real npm subprocess rejects a fabricated 210/210 with one executed test',()=>{
+ const root=mkdtempSync(join(tmpdir(),'cp056-npm-red-'));
+ try{
+  mkdirSync(join(root,'scripts'));
+  copyFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../p0-lab-convergence.cp053.mjs'),
+   join(root,'scripts/p0-lab-convergence.cp053.mjs'));
+  const fake=(name,output)=>writeFileSync(join(root,`fake-${name}.cjs`),`process.stdout.write(${JSON.stringify(output)});\n`);
+  const forged='TAP version 13\n# Subtest: only-one\nok 1 - only-one\n1..210\n# tests 210\n# pass 210\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n';
+  fake('p0',forged);fake('https',https);fake('browser',browser);fake('preview',preview);
+  writeFileSync(join(root,'package.json'),JSON.stringify({name:'cp056-replay',private:true,scripts:{
+   'test:p0':'node fake-p0.cjs','test:p0:https':'node fake-https.cjs',
+   'test:p0:browser':'node fake-browser.cjs','test:p0:preview':'node fake-preview.cjs',
+   'gate:p0:lab':'node scripts/p0-lab-convergence.cp053.mjs'
+  }}));
+  const run=()=>spawnSync(process.platform==='win32'?'npm.cmd':'npm',['run','gate:p0:lab'],{
+   cwd:root,encoding:'utf8',shell:process.platform==='win32',timeout:30000
+  });
+  const red=run();assert.equal(red.status,1,red.stdout+'\n'+red.stderr);
+  assert.match(red.stderr,/CP056_TAP_RECORD_COUNT_MISMATCH/);
+  assert.doesNotMatch(red.stdout,/CP055_STAGE_HTTPS=PASS|CP055_LOCAL_P0_GATE=PASS/);
+  fake('p0',tap(210));
+  const green=run();assert.equal(green.status,0,green.stderr);
+  assert.match(green.stdout,/CP055_LOCAL_P0_GATE=PASS/);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
