@@ -43,12 +43,17 @@ export function parseTapSummaries(output){
  const testPoints=[...output.matchAll(/^( *)(ok|not ok) ([0-9]+) - ([^\r\n]*)$/gm)];
  const rootPoints=testPoints.filter(m=>m[1].length===0);
  const rootPlan=plans.length===1?Number(plans[0][1]):NaN;
- if(version.length!==1||plans.length!==1||!Number.isSafeInteger(rootPlan)||rootPlan<1||rootPlan>o.tests)
+ // Node emits a successful TAP record for each describe() suite, but reports
+ // suites separately rather than adding them to `# tests`.
+ const suiteSummaries=[...output.matchAll(/^# suites ([0-9]+)\s*$/gm)].map(m=>Number(m[1]));
+ const suiteCount=suiteSummaries[0]??0;
+ if(version.length!==1||plans.length!==1||!Number.isSafeInteger(rootPlan)||rootPlan<1||
+    rootPlan>o.tests+suiteCount||suiteSummaries.length>1||!Number.isSafeInteger(suiteCount))
   bad('CP056_TAP_PLAN_MISSING_OR_INCONSISTENT');
  if(keys.some(k=>!Number.isSafeInteger(o[k]))||o.tests<1||o.pass!==o.tests||
   o.fail!==0||o.cancelled!==0||o.skipped!==0||o.todo!==0)bad('CP055_TAP_NOT_ALL_EXECUTED');
  if(testPoints.some(m=>m[2]!=='ok'||/\s#\s*(?:SKIP|TODO)\b/i.test(m[4])))bad('CP056_TAP_NONPASS_RECORD');
- if(rootPoints.length!==rootPlan||testPoints.length!==o.tests||
+ if(rootPoints.length!==rootPlan||testPoints.length!==o.tests+suiteCount||
     rootPoints.some((m,i)=>Number(m[3])!==i+1)||
     testPoints.some(m=>!Number.isSafeInteger(Number(m[3]))||Number(m[3])<1||m[1].length%4!==0))
   bad('CP056_TAP_RECORD_COUNT_MISMATCH');
