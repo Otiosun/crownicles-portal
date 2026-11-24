@@ -194,3 +194,20 @@ test('CP056 accepts genuine Node 22 nested TAP with root plan smaller than total
   assert.throws(()=>parseTapSummaries(output.replace('    1..2\nok 1 - outer suite','ok 1 - outer suite\n    1..2')),/CP056_TAP_NESTING_INVALID/);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+
+test('CP056 accepts Node describe() TAP with suites separate from counted tests',()=>{
+ const root=mkdtempSync(join(tmpdir(),'cp056-describe-'));
+ try{
+  const file=join(root,'describe.test.cjs');
+  writeFileSync(file,"const {describe,it}=require('node:test');const assert=require('node:assert/strict');\n"+
+   "describe('block',()=>{it('one',()=>assert.ok(true));it('two',()=>assert.ok(true));});\n"+
+   "it('flat',()=>assert.ok(true));\n");
+  const env={...process.env};delete env.NODE_TEST_CONTEXT;
+  const run=spawnSync(process.execPath,['--test',file],{encoding:'utf8',timeout:10000,env});
+  assert.equal(run.status,0,run.stderr);
+  assert.match(run.stdout,/1\.\.2\n# tests 3\n# suites 1/);
+  assert.equal(parseTapSummaries(run.stdout).tests,3);
+  assert.throws(()=>parseTapSummaries(run.stdout.replace('# suites 1','# suites 0')),/CP056_TAP_RECORD_COUNT_MISMATCH/);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
