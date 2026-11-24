@@ -56,11 +56,48 @@ export function inspectNativeBrowserEvidence(output){
  if(lines.indexOf(summaries[0])<lines.lastIndexOf('PASS '+CP060_REQUIRED_CHECKS.at(-1)))throw Error('CP062_NATIVE_SUMMARY_ORDER');
  return Object.freeze({stage:'native-browser-tls',count:observed.length});
 }
-export function runNativeBrowserLabGate({cwd=ROOT,execute=spawnSync,baseGate=runLabGate,report=console.log,platform=process.platform}={}){
- if(typeof execute!=='function'||typeof baseGate!=='function'||typeof report!=='function')throw Error('CP062_CALLBACK_REQUIRED');
- const base=baseGate({cwd,execute,report,platform});
+// Failure-only telemetry. Never emit raw stdout/stderr, cookie values, code values,
+// URLs, environment variables, stack traces, or arbitrary assertion messages.
+const CHILD_STAGES=new Set(['test:p0','test:p0:https','test:p0:browser','test:p0:preview','test:p0:browser:tls']);
+const HISTORY_MARKERS=[
+ 'UX-P0-010 Chromium checks','CP047 keyboard/accessibility-tree smoke:',
+ 'CP047 cross-engine HTTP+DOM','CP048 Chromium linking checks',
+ 'CP050 Chromium inventory search','CP051 BROWSER:',
+ 'CP052 PR21 real-controller/catalog Chromium journey:','CP054 BROWSER',
+ 'CP055 Chromium focus regression','CP055 deterministic Chromium focus-race:',
+ 'CP056 ZOOM BROWSER:'
+];
+export function describeFailedChild(args,result){
+ const stage=CHILD_STAGES.has(args?.[1])?args[1]:'unknown';
+ const status=Number.isSafeInteger(result?.status)?String(result.status):'NONE';
+ const output=String(result?.stdout??'')+'\n'+String(result?.stderr??'');
+ const lines=output.split(/\r?\n/);
+ const completed=HISTORY_MARKERS.filter(prefix=>lines.some(line=>{
+   if(!line.startsWith(prefix+' '))return false;
+   const match=/^(\d+)\s*\/\s*(\d+)$/.exec(line.slice(prefix.length).trim());
+   return !!match&&match[1]===match[2]&&Number(match[1])>0;
+ })).length;
+ const files=[...new Set(lines.flatMap(line=>{
+  const m=/^\s*File "[^"\r\n]*\/lab\/ux-p0-010\/(test_[a-zA-Z0-9_.-]+\.py|accessibility-smoke\.cp047\.py)", line (\d{1,6}),/.exec(line);
+  return m?[m[1]+':'+m[2]]:[];
+ }))].slice(-4);
+ const kinds=['TimeoutError','AssertionError','RuntimeError','TypeError','ValueError','TargetClosedError','ConnectionError'];
+ const kind=kinds.find(name=>lines.some(line=>new RegExp('^(?:[a-zA-Z0-9_.]+\\.)?'+name+':').test(line)))??'UNKNOWN';
+ const failCount=lines.filter(line=>/^FAIL(?: |$)/.test(line)).length;
+ return 'CP062_CHILD_FAILURE stage='+stage+' exit='+status+' completed_browser_markers='+completed+
+  ' fail_markers='+failCount+' exception='+kind+' files='+ (files.join(',')||'NONE');
+}
+
+export function runNativeBrowserLabGate({cwd=ROOT,execute=spawnSync,baseGate=runLabGate,report=console.log,diagnose=console.error,platform=process.platform}={}){
+ if(typeof execute!=='function'||typeof baseGate!=='function'||typeof report!=='function'||typeof diagnose!=='function')throw Error('CP062_CALLBACK_REQUIRED');
+ const observedExecute=(bin,args,options)=>{
+  const result=execute(bin,args,options);
+  if(result?.status!==0||result?.error||result?.signal){try{diagnose(describeFailedChild(args,result))}catch{}}
+  return result;
+ };
+ const base=baseGate({cwd,execute:observedExecute,report,platform});
  if(!Array.isArray(base)||base.length!==BASE.length||BASE.some(([name,min],i)=>base[i]?.stage!==name||!Number.isSafeInteger(base[i].count)||base[i].count<min))throw Error('CP062_BASE_GATE_INCOMPLETE');
- const response=execute(platform==='win32'?'npm.cmd':'npm',['run','test:p0:browser:tls'],{cwd,encoding:'utf8',shell:platform==='win32',maxBuffer:4*1024*1024,timeout:120000,env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
+ const response=observedExecute(platform==='win32'?'npm.cmd':'npm',['run','test:p0:browser:tls'],{cwd,encoding:'utf8',shell:platform==='win32',maxBuffer:4*1024*1024,timeout:120000,env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
  if(response?.error)throw Error('CP062_NATIVE_SPAWN:'+String(response.error.code??'UNKNOWN'));
  if(response?.signal)throw Error('CP062_NATIVE_SIGNAL:'+response.signal);
  if(response?.status!==0)throw Error('CP062_NATIVE_EXIT:'+String(response?.status??'NONE'));
