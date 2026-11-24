@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {CP060_REQUIRED_CHECKS as names,inspectNativeBrowserEvidence as inspect,runNativeBrowserLabGate as gate,describeFailedChild as describe} from '../p0-lab-native-browser.cp062.mjs';
+const lines=names.map(n=>'PASS '+n);
+const summary='CP060 NATIVE BROWSER TLS: 36 / 36';
+const ok=[...lines,summary].join('\n');
+const base=[{stage:'p0',count:239},{stage:'https',count:16},{stage:'browser',count:415},{stage:'preview',count:1}];
+const good=()=>({status:0,stdout:ok,stderr:''});
+test('CP062 native evidence recognizes all exact names, order and summary',()=>{assert.deepEqual(inspect(ok),{stage:'native-browser-tls',count:36});assert.deepEqual(inspect(ok.replaceAll('\n','\r\n')),{stage:'native-browser-tls',count:36});});
+test('CP062 rejects each of 36 individually missing or substituted checks',()=>{for(let i=0;i<lines.length;i++){assert.throws(()=>inspect([...lines.filter((_,j)=>j!==i),summary].join('\n')),/CHECKS/);assert.throws(()=>inspect([...lines.map((s,j)=>j===i?'PASS substituted':s),summary].join('\n')),/CHECKS/);}});
+test('CP062 rejects duplicate, extra or out-of-order native checks',()=>{for(const list of [[...lines,lines[0]],[...lines,'PASS extra'],[lines[1],lines[0],...lines.slice(2)]])assert.throws(()=>inspect([...list,summary].join('\n')),/CHECKS/);});
+test('CP062 rejects absent duplicate or false summary and summary before completion',()=>{for(const s of [lines.join('\n'),ok+'\n'+summary,ok.replace('36 / 36','35 / 36'),ok.replace('36 / 36','0 / 0')])assert.throws(()=>inspect(s),/SUMMARY/);assert.throws(()=>inspect([summary,...lines].join('\n')),/ORDER/);});
+test('CP062 rejects explicit native failure even with complete summary',()=>{assert.throws(()=>inspect(ok+'\nCP060 FAIL phase=cleanup'),/FAILURE/);assert.throws(()=>inspect(ok+'\nFAIL check'),/FAILURE/);});
+test('CP062 invokes native test only after valid complete base gate and reports 707',()=>{const reports=[];let calls=0;const r=gate({baseGate:()=>base,execute:(bin,args)=>{calls++;assert.equal(bin,'npm');assert.deepEqual(args,['run','test:p0:browser:tls']);return good();},report:s=>reports.push(s),platform:'linux'});assert.equal(calls,1);assert.equal(r.length,5);assert.match(reports.at(-1),/CASES=707; BROWSER_TLS_LOOPBACK=PASS; AUTH_WA_OIDC_CORE_PRODUCTION=NOT_TESTED/);});
+test('CP062 does not invoke native if base throws or drops a stage or baseline',()=>{let calls=0;const execute=()=>{calls++;return good();};for(const wrong of [base.slice(0,-1),[...base.slice(0,3),{stage:'preview',count:0}],base.map((s,i)=>i===0?{stage:'p0',count:238}:s)])assert.throws(()=>gate({baseGate:()=>wrong,execute,report:()=>{}}),/BASE_GATE/);assert.throws(()=>gate({baseGate:()=>{throw Error('base fail')},execute,report:()=>{}}),/base fail/);assert.equal(calls,0);});
+test('CP062 fails closed on exit code, missing process, timeout, signal, or missing evidence',()=>{for(const response of [{status:1,stdout:ok},null,{error:{code:'ETIMEDOUT'},status:null},{status:null,signal:'SIGTERM'},{status:0,stdout:summary}]){const reports=[];assert.throws(()=>gate({baseGate:()=>base,execute:()=>response,report:s=>reports.push(s)}),/CP062_/);assert.equal(reports.length,0);}});
+
+test('CP062 failure diagnostics allowlist only stage, status, markers, exception and test filename',()=>{
+ const message=describe(['run','test:p0:browser'],{status:1,stdout:'UX-P0-010 Chromium checks 46 / 46\nFAIL raw private fixture payload\nPASS arbitrary test\n',stderr:'  File "/tmp/checkout/lab/ux-p0-010/test_focus_race.cp055.py", line 88, in test\nplaywright._impl._errors.TimeoutError: private-content\nCookie: abc\n'});
+ assert.match(message,/stage=test:p0:browser exit=1 completed_browser_markers=1 fail_markers=1 exception=TimeoutError files=test_focus_race.cp055.py:88/);
+ assert.doesNotMatch(message,/private|Cookie|abc|\/tmp/);
+ assert.match(describe(['run','private-stage'],{status:null}),/stage=unknown exit=NONE/);
+});
+test('CP062 failure diagnostic never changes real child result or emits success',()=>{
+ const diagnostics=[],reports=[];
+ const response={status:1,stdout:'FAIL private-label',stderr:'RuntimeError: private-reason'};
+ assert.throws(()=>gate({baseGate:()=>base,execute:()=>response,report:s=>reports.push(s),diagnose:s=>diagnostics.push(s)}),/NATIVE_EXIT:1/);
+ assert.equal(diagnostics.length,1);assert.equal(reports.length,0);
+ assert.doesNotMatch(diagnostics[0],/private/);
+ assert.throws(()=>gate({baseGate:({execute})=>{assert.equal(execute('npm',['run','test:p0:browser'],{}),response);throw Error('base failure')},execute:()=>response,diagnose:()=>{throw Error('log failure')},report:()=>{}}),/base failure/);
+});
