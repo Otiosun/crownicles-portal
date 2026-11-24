@@ -138,7 +138,7 @@ test('CP056 fails if TAP claims 210 passed but only one test record exists',()=>
 test('CP056 rejects duplicate ordinal, missing subtest and not-ok amidst green summary',()=>{
  const canonical=tap(210);
  assert.throws(()=>inspectLabEvidence('p0',canonical.replace('ok 110 - fixture-110','ok 109 - fixture-110')),/CP056_TAP_RECORD_ORDER_INVALID/);
- assert.throws(()=>inspectLabEvidence('p0',canonical.replace('# Subtest: fixture-40\n','')),/CP056_TAP_RECORD_COUNT_MISMATCH/);
+ assert.throws(()=>inspectLabEvidence('p0',canonical.replace('# Subtest: fixture-40\n','')),/CP056_TAP_RECORD_(?:COUNT|PAIR)_MISMATCH/);
  assert.throws(()=>inspectLabEvidence('p0',canonical.replace('ok 40 - fixture-40','not ok 40 - fixture-40')),/CP056_TAP_RECORD_ORDER_INVALID/);
  assert.throws(()=>inspectLabEvidence('p0',canonical.replace('1..210','1..209')),/CP056_TAP_RECORD_COUNT_MISMATCH/);
 });
@@ -172,5 +172,24 @@ test('CP056 real npm subprocess rejects a fabricated 210/210 with one executed t
   fake('p0',tap(210));
   const green=run();assert.equal(green.status,0,green.stderr);
   assert.match(green.stdout,/CP055_LOCAL_P0_GATE=PASS/);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+
+test('CP056 accepts genuine Node 22 nested TAP with root plan smaller than total tests',()=>{
+ const root=mkdtempSync(join(tmpdir(),'cp056-nested-'));
+ try{
+  const file=join(root,'nested.test.cjs');
+  writeFileSync(file,"const test=require('node:test'); const assert=require('node:assert/strict');\n"+
+   "test('outer suite',async(t)=>{await t.test('inner one',()=>assert.ok(true));await t.test('inner two',()=>assert.ok(true));});\n"+
+   "test('flat',()=>assert.ok(true));\n");
+  const childEnv={...process.env};delete childEnv.NODE_TEST_CONTEXT;
+  const run=spawnSync(process.execPath,['--test',file],{encoding:'utf8',timeout:10000,env:childEnv});
+  assert.equal(run.status,0,run.stderr);
+  const output=run.stdout;
+  assert.match(output,/1\.\.2\n# tests 4/);
+  assert.equal(parseTapSummaries(output).tests,4);
+  assert.throws(()=>parseTapSummaries(output.replace('    ok 2 - inner two','    ok 1 - inner two')),/CP056_TAP_RECORD_ORDER_INVALID/);
+  assert.throws(()=>parseTapSummaries(output.replace('    1..2','    1..1')),/CP056_TAP_RECORD_COUNT_MISMATCH/);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
