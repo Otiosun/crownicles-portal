@@ -21,7 +21,27 @@ export function createSessionHandler({ledger,authority,repo,rateScopeFor,origin=
    if(req.method==='POST'&&req.headers.origin!==origin)return send(403,{error:'origin_rejected'});
    if(req.headers.authorization!==undefined)return send(400,{error:'invalid_request'});
    let cookies;try{cookies=parsedCookies(req)}catch{return send(400,{error:'invalid_request'})}let link=cookies[LINK],session=cookies[SESSION];
-   if(path==='/v1/link/start'){let scope=await rateScopeFor(req),c=ledger.issueChallenge(scope);if(c.status==='rate_limited')return send(429,{status:c.status});if(link)ledger.cancelChallenge(link);return send(201,{status:'issued',code:c.code,expiresAt:c.expiresAt},[cookie(LINK,c.browserSecret,(c.expiresAt-clock())/1000)]);}
+   if(path==='/v1/link/start'){
+    // CP059: issuing a new code cannot acknowledge replacement until the
+    // previous challenge/session revocation has been confirmed.
+    // Rate limiting still leaves the previous challenge intact.
+    let scope=await rateScopeFor(req),c=ledger.issueChallenge(scope);
+    if(c.status==='rate_limited')return send(429,{status:c.status});
+    if(link){
+     let cancelled;
+     try{cancelled=ledger.cancelChallenge(link)}catch(e){
+      const cleanup=ledger.cancelChallenge(c.browserSecret);
+      if(cleanup.status!=='cancelled')throw Error('CP059_REISSUE_CLEANUP_UNCONFIRMED');
+      throw e;
+     }
+     if(cancelled.status!=='cancelled'){
+      const cleanup=ledger.cancelChallenge(c.browserSecret);
+      if(cleanup.status!=='cancelled')throw Error('CP059_REISSUE_CLEANUP_UNCONFIRMED');
+      return send(409,{status:'unavailable'},[cookie(LINK,'',0)]);
+     }
+    }
+    return send(201,{status:'issued',code:c.code,expiresAt:c.expiresAt},[cookie(LINK,c.browserSecret,(c.expiresAt-clock())/1000)]);
+   }
    if(path==='/v1/link/status')return send(200,ledger.challengeStatus(link));
    if(path==='/v1/link/cancel'){const cancelled=ledger.cancelChallenge(link);return cancelled.status==='cancelled'?send(200,{status:'cancelled'},[cookie(LINK,'',0)]):send(409,{status:'unavailable'},[cookie(LINK,'',0)])}
    if(path==='/v1/link/redeem'){
