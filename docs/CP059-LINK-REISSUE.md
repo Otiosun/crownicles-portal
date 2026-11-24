@@ -35,8 +35,8 @@ node --test scripts/qa/cp059-reissue-guard.test.mjs
 # RED esperado sem patch; não usar esse resultado para liberar merge.
 git apply --check patches/cp059-reissue-fail-closed.patch
 git apply patches/cp059-reissue-fail-closed.patch
-node --test scripts/tests/cp056-link-cancel-race.test.mjs \\
-  scripts/qa/cp059-reissue-guard.test.mjs \\
+node --test scripts/tests/cp056-link-cancel-race.test.mjs \
+  scripts/qa/cp059-reissue-guard.test.mjs \
   scripts/qa/cp059-client-reissue.test.mjs
 ```
 
