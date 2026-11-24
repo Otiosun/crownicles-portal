@@ -21,7 +21,8 @@ const browserMarkers=Object.freeze([
  ['CP052 PR21 real-controller/catalog Chromium journey:',23],
  ['CP054 BROWSER',104],
  ['CP055 Chromium focus regression',24],
- ['CP055 deterministic Chromium focus-race:',14]
+ ['CP055 deterministic Chromium focus-race:',14],
+ ['CP056 ZOOM BROWSER:',130]
 ]);
 const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const bad=(code)=>{throw Error(code)};
