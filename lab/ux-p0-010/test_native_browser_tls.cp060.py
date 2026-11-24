@@ -222,7 +222,10 @@ def main():
                     check("revocation removes private DOM", pb.locator(".metric").count() == 0)
                 finally:
                     browser.close()
+            PHASE = "fixture graceful shutdown"
             command(proc, "exit")
+            # The parent owns the stdin writer. EOF lets the readline loop release its handle.
+            proc.stdin.close()
             check("fixture exits cleanly", proc.wait(timeout=10) == 0)
         finally:
             if proc.poll() is None:
