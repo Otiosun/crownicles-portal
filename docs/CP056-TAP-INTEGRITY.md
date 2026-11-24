@@ -44,6 +44,8 @@ Hashes Git blob finais:
 
 Reconstituição local de CP048/CP049 R3 e **26/26 blobs** do HEAD PR30 conferidos por SHA-1 de objeto Git: `npm run test:p0` **210/210 PASS**. Na árvore de laboratório com a CP056 aplicada, o comando `npm run gate:p0:lab` emitiu os quatro marcadores `P0=210`, `HTTPS=16`, `BROWSER=285`, `PREVIEW=1` e o marcador terminal `CP055_LOCAL_P0_GATE=PASS`. A ferramenta de execução externa interrompeu a captura do processo depois dessas linhas: **não há status de saída final verificado nesse replay**, e não deve ser apresentado como CI/checkout completo.
 
+**Rechecagem independente por estágio (24/11):** os quatro comandos da árvore P0 reconstruída encerraram individualmente com status **0**: `npm run test:p0` 210/210, `npm run test:p0:https` Node12/12 + Python4/4, `npm run test:p0:browser` 285/285 e `npm run test:p0:preview` 1/1. `npm run test:tools` terminou **62/62**, exit 0, incluindo a CP056. A execução agregada do gate imprimiu os marcadores de sucesso mas teve captura final interrompida em uma repetição; portanto é evidência complementar dos estágios, não prova de exit0 da invocação agregadora nem execução de CI GitHub.
+
 ## Reprodução
 
 ```sh
