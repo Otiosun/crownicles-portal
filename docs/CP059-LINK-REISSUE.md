@@ -21,9 +21,9 @@ O handler preserva a ordem **verificar emissão/quota → cancelar desafio anter
 Fontes de laboratório CP049 R3 com baseline CP048 reconstituídas por manifesto. A árvore de execução é uma reconstrução **parcial** dos módulos envolvidos, não um checkout integral do HEAD PR33 ou PR30. Foram sobrepostos os três blobs Git reais da PR33: `identity.mjs` `940d7ebeab264b2d9d7907925987f45e02017569`, `session-gateway.mjs` `a29e4ef3838586ff3ad022a3e2c6a3872ae23b0e` e teste CP056 `cb4aea70a2da92ab3042198e27ed707e15a63ad1`. Hash `blob <len>\\0<bytes>` de cada fonte conferido.
 
 - Suíte exploratória expandida 14 testes: código PR33 original **6 PASS / 8 FAIL** (RED esperado); patch local **14/14 PASS**.
-- Suite de 12 testes publicada em `scripts/qa/cp059-reissue-guard.test.mjs` (blob `60edfcc9c99b39ec1910bdaa46936d8da5d07974`) e patch **byte-idênticos ao GitHub**, em reconstrução limpa: fonte original **6 PASS / 6 FAIL** (RED), candidata **12/12 PASS**.
-- Regressão PR33 `scripts/tests/cp056-link-cancel-race.test.mjs` **11/11 PASS** com candidata, total **23/23 PASS**, exit 0.
-- Teste cliente CP048 `scripts/qa/cp059-client-reissue.test.mjs`: **4/4 PASS**, sem falsear confirmação após HTTP 409; erro permite nova tentativa após cookie antigo ser limpo.
+- Suíte de 13 testes publicada em `scripts/qa/cp059-reissue-guard.test.mjs` (blob `6d15d04bfb7e86aa53d3b4d90acc9e161b053cdd`) e patch **byte-idênticos ao GitHub**, em reconstrução limpa: fonte original **6 PASS / 7 FAIL** (RED), candidata **13/13 PASS**. Inclui um cenário SQLite persistido, fechado e reaberto com linha consumida legada sem associação.
+- Regressão PR33 `scripts/tests/cp056-link-cancel-race.test.mjs` **11/11 PASS** com candidata, total **24/24 PASS**, exit 0.
+- Teste cliente CP048 `scripts/qa/cp059-client-reissue.test.mjs`: **4/4 PASS**, total combinado **28/28 PASS** sem falsear confirmação após HTTP 409; erro permite nova tentativa após cookie antigo ser limpo.
 - Cinco mutações locais (ignorar status, omitir limpeza, ignorar quota, não limpar cookie, não revogar antigo) resultaram todas em **exit ≠ 0**, com falha adversarial detectada. Testes Node v22.16.0, SQLite real e HTTP em 127.0.0.1, dados fictícios.
 - O comando `npm run check` **não está certificado nesta árvore parcial**: o baseline R3 isolado não inclui `web/app.js` do HEAD completo; uma tentativa retornou MODULE_NOT_FOUND. Portanto não alegar CI/check global verde.
 
