@@ -54,6 +54,40 @@ export class IdentityLedger {
    throw Error('CHALLENGE_COLLISION_LIMIT');});
  }
  privateContext(ctx){return !!ctx&&ctx.channel==='private'&&ctx.verified===true&&REF.test(ctx.ref??'')&&UUID.test(ctx.actor??'')&&validEpoch(ctx.epoch)&&this.current(ctx.ref,ctx.actor,ctx.epoch)}
+ // CP063: Replacement is ONE SQLite transaction, including quota, issuance,
+ // old challenge state and the session minted by that exact old challenge.
+ // Unlike cancelChallenge's idempotent success for revoked rows, replacement
+ // must reject an already-replaced cookie to prevent concurrent 201 responses.
+ reissueChallenge(rateScope,browserSecret){
+  if(!REF.test(rateScope??''))throw Error('TRUSTED_RATE_SCOPE_REQUIRED');
+  if(!TOKEN.test(browserSecret??''))return invalid();
+  return this.tx(()=>{
+   const now=this.now();
+   if(!this.limit(rateScope,'issue',now,5))return {status:'rate_limited'};
+   const oldDigest=this.digest('browser',browserSecret);
+   const prior=this.db.prepare('SELECT state,expires FROM challenges WHERE browser=?').get(oldDigest);
+   if(!prior||prior.state==='revoked'||prior.expires<=now)return invalid();
+   let linkedSecret=null;
+   if(prior.state==='consumed'){
+    const link=this.db.prepare('SELECT secret FROM challenge_sessions WHERE browser=?').get(oldDigest);
+    if(!link)return invalid(); // Legacy consumed state: never invent revocation.
+    linkedSecret=link.secret;
+   }
+   let issued=null;
+   for(let i=0;i<4;i++){
+    const raw=code(),secret=token();
+    const inserted=this.db.prepare("INSERT OR IGNORE INTO challenges(browser,code,state,created,expires) VALUES(?,?,'pending',?,?)")
+     .run(this.digest('browser',secret),this.digest('code',raw),now,now+CHALLENGE_MS);
+    if(inserted.changes===1){issued={status:'issued',code:formatCode(raw),browserSecret:secret,expiresAt:now+CHALLENGE_MS};break;}
+   }
+   if(!issued)throw Error('CHALLENGE_COLLISION_LIMIT');
+   if(linkedSecret)this.db.prepare('UPDATE sessions SET revoked=1 WHERE secret=?').run(linkedSecret);
+   const changed=this.db.prepare("UPDATE challenges SET state='revoked' WHERE browser=? AND state=? AND expires>?")
+    .run(oldDigest,prior.state,now);
+   if(changed.changes!==1)throw Error('CHALLENGE_REISSUE_CONFLICT');
+   return issued;
+  });
+ }
  // This returns a preview nonce to the bot only. The bot must show anti-relay warning + explicit confirmation.
  prepareApproval(rawCode,ctx){return this.tx(()=>{let now=this.now();if(!this.privateContext(ctx))return invalid();if(!this.limit(ctx.ref,'preview',now,8))return {status:'rate_limited'};let raw=normalizeCode(rawCode);if(!raw)return invalid();
   let row=this.db.prepare('SELECT * FROM challenges WHERE code=?').get(this.digest('code',raw));if(!row||row.state!=='pending'||row.expires<=now)return invalid();let nonce=token(),expires=Math.min(row.expires,now+PREVIEW_MS);

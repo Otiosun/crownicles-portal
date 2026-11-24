@@ -103,6 +103,7 @@ if __name__ == "__main__":
    ck('Correct same-origin/no-store, no raw Cookie or Authorization',page.evaluate("window.__calls[0].credentials==='same-origin'&&window.__calls[0].cache==='no-store'&&Object.keys(window.__calls[0].headers).every(k=>!['cookie','authorization'].includes(k.toLowerCase()))"))
    ck('Viewport 390 no internal overflow',no_overflow(page))
    click(page,'inventory');ready(page,'inventory')
+   page.wait_for_function("document.activeElement?.id==='inventory-heading'",timeout=3000)
    ck('Async inventory load restores heading focus',page.evaluate("document.activeElement?.id==='inventory-heading'"))
    ck('Inventory category buttons 4',page.locator('button[data-action="category"]').count()==4)
    ck('Category 0 active id preserved',page.locator('button[data-action="select"]').first.get_attribute('data-slot')=='0')
