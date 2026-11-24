@@ -119,7 +119,7 @@ test('CP055 real npm subprocess smoke passes and rejects missing browser evidenc
 
 test('CP055 TAP needs a version, a bounded plan and an executed test record',()=>{
  for(const invalid of [tap(210).replace('TAP version 13\n',''),tap(210).replace('1..210','1..999'),tap(210).replace('ok 1 - fixture-1\n','')])
-  assert.throws(()=>inspectLabEvidence('p0',invalid),/TAP_(?:PLAN_MISSING_OR_INCONSISTENT|RECORD_COUNT_MISMATCH)/);
+  assert.throws(()=>inspectLabEvidence('p0',invalid),/TAP_(?:PLAN_MISSING_OR_INCONSISTENT|RECORD_COUNT_MISMATCH|NESTING_INVALID)/);
 });
 
 test('CP055 refuses missing CP054/focus Chromium markers',()=>{
@@ -138,7 +138,7 @@ test('CP056 fails if TAP claims 210 passed but only one test record exists',()=>
 test('CP056 rejects duplicate ordinal, missing subtest and not-ok amidst green summary',()=>{
  const canonical=tap(210);
  assert.throws(()=>inspectLabEvidence('p0',canonical.replace('ok 110 - fixture-110','ok 109 - fixture-110')),/CP056_TAP_RECORD_ORDER_INVALID/);
- assert.throws(()=>inspectLabEvidence('p0',canonical.replace('# Subtest: fixture-40\n','')),/CP056_TAP_RECORD_(?:COUNT|PAIR)_MISMATCH/);
+ assert.throws(()=>inspectLabEvidence('p0',canonical.replace('# Subtest: fixture-40\n','')),/CP056_TAP_(?:RECORD_(?:COUNT|PAIR)_MISMATCH|NESTING_INVALID)/);
  assert.throws(()=>inspectLabEvidence('p0',canonical.replace('ok 40 - fixture-40','not ok 40 - fixture-40')),/CP056_TAP_RECORD_ORDER_INVALID/);
  assert.throws(()=>inspectLabEvidence('p0',canonical.replace('1..210','1..209')),/CP056_TAP_RECORD_COUNT_MISMATCH/);
 });
@@ -191,5 +191,6 @@ test('CP056 accepts genuine Node 22 nested TAP with root plan smaller than total
   assert.equal(parseTapSummaries(output).tests,4);
   assert.throws(()=>parseTapSummaries(output.replace('    ok 2 - inner two','    ok 1 - inner two')),/CP056_TAP_RECORD_ORDER_INVALID/);
   assert.throws(()=>parseTapSummaries(output.replace('    1..2','    1..1')),/CP056_TAP_RECORD_COUNT_MISMATCH/);
+  assert.throws(()=>parseTapSummaries(output.replace('    1..2\nok 1 - outer suite','ok 1 - outer suite\n    1..2')),/CP056_TAP_NESTING_INVALID/);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
