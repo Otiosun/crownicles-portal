@@ -8,6 +8,9 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import {once} from 'node:events';
 import {randomBytes} from 'node:crypto';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {IdentityLedger} from '../../lab/cp014/identity.mjs';
 import {createSessionHandler} from '../../lab/cp014/session-gateway.mjs';
 
@@ -15,14 +18,14 @@ const REF='a'.repeat(64),ACTOR='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const RATE='f'.repeat(64),ORIGIN='https://portal.example.test';
 const LINK='__Host-crownicles_link',SESSION='__Host-crownicles_session';
 const now=()=>1_700_000_000_000;
-async function setup(t){
- const ledger=new IdentityLedger({pepper:Buffer.alloc(32,71),clock:now});
+async function setup(t,{file=':memory:',cleanupDir}={}){
+ const ledger=new IdentityLedger({file,pepper:Buffer.alloc(32,71),clock:now});
  ledger.observeBinding({ref:REF,actor:ACTOR,epoch:1});
  const handler=createSessionHandler({ledger,authority:{readBinding:async()=>({actor:ACTOR,epoch:1})},repo:{},
   rateScopeFor:async()=>RATE,origin:ORIGIN,clock:now});
  const server=http.createServer(handler);
  server.listen(0,'127.0.0.1');await once(server,'listening');
- t.after(async()=>{server.closeAllConnections();await new Promise(r=>server.close(r));ledger.close();});
+ t.after(async()=>{server.closeAllConnections();await new Promise(r=>server.close(r));ledger.close();if(cleanupDir)rmSync(cleanupDir,{recursive:true,force:true});});
  const send=(path,{link,session,origin=ORIGIN}={})=>new Promise((resolve,reject)=>{
   const cookie=[link&&LINK+'='+link,session&&SESSION+'='+session].filter(Boolean).join('; ');
   const req=http.request({hostname:'127.0.0.1',port:server.address().port,path,method:'POST',
@@ -129,4 +132,25 @@ test('CP059 201 result exposes neither actor nor internal binding or session cre
  assert.equal(r.status,201);const body=JSON.stringify(r.data);
  assert.equal(body.includes(ACTOR),false);assert.equal(body.includes(REF),false);
  assert.ok(cookies(r).every(c=>c.includes('Secure')&&c.includes('HttpOnly')&&c.includes('SameSite=Strict')));
+});
+
+test('CP059 migrated consumed legacy row persists across SQLite close/reopen and must fail closed',async t=>{
+ const dir=mkdtempSync(join(tmpdir(),'cp059-db-reopen-')),file=join(dir,'ledger.sqlite');
+ const old=new IdentityLedger({file,pepper:Buffer.alloc(32,71),clock:now});
+ let challenge,session;
+ try{
+  old.observeBinding({ref:REF,actor:ACTOR,epoch:1});
+  challenge=old.issueChallenge(RATE);
+  const ctx={channel:'private',verified:true,ref:REF,actor:ACTOR,epoch:1,confirmed:true};
+  const a=old.prepareApproval(challenge.code,ctx);
+  assert.equal(a.status,'confirm');assert.equal(old.confirmApproval(a.approvalNonce,ctx).status,'approved');
+  session=old.redeem(challenge.browserSecret);
+  assert.equal(session.status,'redeemed');
+  old.db.exec('DELETE FROM challenge_sessions');
+ }finally{old.close();}
+ const x=await setup(t,{file,cleanupDir:dir});
+ assert.ok(x.ledger.inspectSession(session.sessionToken),'persisted session survives reopen');
+ const before=countLive(x.ledger),r=await x.send('/v1/link/start',{link:challenge.browserSecret});
+ assert.equal(r.status,409);assert.equal(countLive(x.ledger),before);
+ assert.ok(x.ledger.inspectSession(session.sessionToken),'no false revocation acknowledgement');
 });
