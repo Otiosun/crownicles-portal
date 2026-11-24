@@ -1,0 +1,38 @@
+name: CP060 isolated Chromium TLS laboratory
+on:
+  pull_request:
+    branches: [feature/cp059-reissue-failclosed-integrated-20261124]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  native-browser-tls:
+    if: github.repository == 'Otiosun/crownicles-portal' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'lab/cp060-native-browser-tls-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify ancestor and isolated checkout
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git rev-parse HEAD^)" = "1e6a835dff2fca88940e1ba1a4f9803346908c98"
+          node --version
+          google-chrome --version
+      - name: Install pinned test dependency and NSS tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/cp060-venv"
+          "$RUNNER_TEMP/cp060-venv/bin/pip" install --disable-pip-version-check playwright==1.57.0
+          if ! command -v certutil >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq libnss3-tools
+          fi
+      - name: Real Chromium TLS and native cookie proof
+        run: |
+          "$RUNNER_TEMP/cp060-venv/bin/python" lab/ux-p0-010/test_native_browser_tls.cp060.py
