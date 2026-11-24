@@ -42,6 +42,7 @@ export function parseTapSummaries(output){
  // `# tests 210 / # pass 210` summary and exit zero. This is NOT a signature.
  if(version.length!==1||plans.length<1)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
  const declarations=new Map(),results=new Map(),pending=new Map();
+ const open=[];
  let allResults=0,rootPlans=0;
  const append=(map,indent,value)=>{if(!map.has(indent))map.set(indent,[]);map.get(indent).push(value)};
  for(const line of output.split(/\r?\n/)){
@@ -51,13 +52,22 @@ export function parseTapSummaries(output){
   if(!sub&&!rec&&!plan)continue;
   const indent=(sub??rec??plan)[1].length;
   if(indent%4!==0)bad('CP056_TAP_INDENT_INVALID');
-  if(sub)append(declarations,indent,sub[2]);
+  if(sub){
+   const parent=open.at(-1);
+   if(parent ? indent!==parent.indent+4 : indent!==0)bad('CP056_TAP_NESTING_INVALID');
+   open.push({indent,name:sub[2]});
+   append(declarations,indent,sub[2]);
+  }
   if(rec){
-   allResults++;
+   const current=open.at(-1);
+   if(!current||current.indent!==indent||current.name!==rec[4]||
+     [...pending.keys()].some(d=>d>indent))bad('CP056_TAP_NESTING_INVALID');
+   open.pop();allResults++;
    append(results,indent,{name:rec[4],status:rec[2]});
    append(pending,indent,{number:Number(rec[3]),status:rec[2]});
   }
   if(plan){
+   if(indent===0 ? open.length!==0 : open.at(-1)?.indent!==indent-4)bad('CP056_TAP_NESTING_INVALID');
    const count=Number(plan[2]),entries=pending.get(indent)||[];
    if(!Number.isSafeInteger(count)||count<1||entries.length!==count)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
    for(let i=0;i<count;i++)if(entries[i].status!=='ok'||entries[i].number!==i+1)bad('CP056_TAP_RECORD_ORDER_INVALID');
@@ -65,7 +75,7 @@ export function parseTapSummaries(output){
    if(indent===0)rootPlans++;
   }
  }
- if(rootPlans!==1||pending.size||allResults!==o.tests)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
+ if(rootPlans!==1||open.length||pending.size||allResults!==o.tests)bad('CP056_TAP_RECORD_COUNT_MISMATCH');
  let declarationCount=0;
  for(const [indent,decl] of declarations){
   declarationCount+=decl.length;
