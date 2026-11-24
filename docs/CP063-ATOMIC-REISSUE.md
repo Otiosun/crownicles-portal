@@ -38,6 +38,15 @@ Base exata PR40, commit `8210f76b7a6c68d115cd52a8b725308be5a7e167`.
 - **`npm run check`:** audit:imports PASS, `test:web` 43/43, `test:integration` 24/24, `test:tools` 129/129, `test:p0` 239/239 = **435 execuções** de quatro suítes, contagens com repetição intencional, 0 fail/skip, **exit 0**. O primeiro `npm run check` deu RED 128/129 em tools porque os nomes do manifesto CP061 foram mudados; preservamos os nomes e a segunda execução concluiu integralmente exit0.
 - **Gate agregado:** primeira tentativa do comando `npm run gate:p0:lab` imprimiu `CP055_STAGE_P0=PASS; CASES=239` e `CP055_STAGE_HTTPS=PASS; CASES=16`, mas a execução foi interrompida pelo limite externo antes de concluir Chromium e preview. **NÃO registrar gate agregado como exit0 local sem execução completa controlada.**
 
+### Adendo de QA após publicação da PR
+
+- **GitHub Actions real PR#43:** run [45476676684](https://github.com/Otiosun/crownicles-portal/actions/runs/45476676684), job `web-contracts` `138738614690`, **8/8 etapas SUCCESS**, incluindo `npm install` e `npm run check`. O runner não executou browser P0 nem native Core/WA/DB nesta execução.
+- **Estresse CP063:** **40/40 processos independentes** executando 14 testes cada, **560/560 PASS**, 0 falhas/skip, duração total medida 7,6s em Node22.16/SQLite local. É repetição com interleaving controlado, não prova de tráfego produtivo.
+- **Mutações causais:** **6/6 detectadas (exit1)** em cópias locais: omitir revogação da sessão, permitir replay de cookie revogado, ignorar rate limit, omitir revogação do desafio anterior, trocar erro de vínculo legado e desligar a transação. Após cada mutação a fonte foi restaurada e Git blob verificado como `265d9daa4740e6406d3fe74c7e80ddbd83fd2c17`.
+- **Chromium histórico:** 11 scripts executados separadamente em três lotes, todos com **exit0**: 46+10+14+19+20+11+23+104+24+14+130 = **415/415 verificações**. Comprova integração de controlador real com fixture ESM/DOM, não navegador HTTPS autenticado por cookie real.
+- **Prévia HTTPS sintética CP053:** `npm run test:p0:preview` **1/1, exit0**. P0 Node239 e HTTPS16 foram observados como PASS por etapa em gate parcial, mas duas tentativas da invocação agregada foram interrompidas externamente antes de Chromium; **gate CLI agregado=NOT_VERIFIED** nesta sessão. Os lotes Chromium separados não transformam esse resultado em `gate:p0:lab` completo.
+- Os testes novos CP063 estão em `test:tools`, mas **não** no manifesto obrigatório de nomes P0 CP061, que exige apenas os 18 CP059. Próximo integrador pode promover explicitamente CP063 ao gate depois da composição PR42+PR43, sem alterar silenciosamente o parser/runner durante este lease.
+
 ## Testes manuais
 
 ```sh
