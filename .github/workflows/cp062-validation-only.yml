@@ -13,15 +13,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          fetch-depth: 4
+          fetch-depth: 5
           ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
       - name: Verify exact candidate parent
         run: |
-          test "$(git rev-parse HEAD~3)" = "8e9c5bbc26dde730f648cd90d0f87b45c4cda5cf"
-          test "$(git diff --name-only HEAD~3 HEAD)" = ".github/workflows/cp062-validation-only.yml"
+          test "$(git rev-parse HEAD~4)" = "8e9c5bbc26dde730f648cd90d0f87b45c4cda5cf"
+          test "$(git diff --name-only HEAD~4 HEAD)" = ".github/workflows/cp062-validation-only.yml"
           node --version
           google-chrome --version
       - name: Isolated dependencies
@@ -36,7 +36,24 @@ jobs:
           if [ ! -e /usr/bin/chromium ]; then
             sudo ln -s "$(command -v google-chrome)" /usr/bin/chromium
           fi
-      - name: Execute exact combined gate after successful focused diagnostic
+      - name: Diagnostic execution with child stage evidence (not CLI proof)
         run: |
           source "$RUNNER_TEMP/cp062-venv/bin/activate"
-          npm run gate:p0:lab:native-browser
+          node --input-type=module <<'JS'
+          import {spawnSync} from 'node:child_process';
+          import {runNativeBrowserLabGate} from './scripts/p0-lab-native-browser.cp062.mjs';
+          const execute=(bin,args,options)=>{
+            const result=spawnSync(bin,args,options);
+            if(result.status!==0||result.error||result.signal){
+              console.log('CP062_DIAGNOSTIC_STAGE='+args[1]+'; EXIT='+result.status);
+              const lines=(String(result.stdout??'')+'\n'+String(result.stderr??'')).split(/\r?\n/);
+              for(const line of lines){
+                if(/^(FAIL\b|UX-P0-010 Chromium checks|CP0[0-9][0-9] (?:BROWSER|Chromium|keyboard|cross-engine|deterministic|PR21|ZOOM))/.test(line)||/^\s*File ".*\/lab\/ux-p0-010\/[^"]+\.py", line \d+/.test(line)||/^(?:playwright\.[\w.]+\.)?(?:TimeoutError|AssertionError|RuntimeError|TypeError|ValueError):/.test(line)){
+                  if(!/cookie|token|secret|password|authorization/i.test(line))console.log('DIAGNOSTIC '+line.slice(0,250));
+                }
+              }
+            }
+            return result;
+          };
+          try{runNativeBrowserLabGate({execute})}catch(e){console.error('CP062_DIAGNOSTIC_FAIL '+e.message);process.exitCode=1}
+          JS
