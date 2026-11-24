@@ -20,6 +20,8 @@ const files=[
   'lab/ux-p0-010/link-flow.cp048.test.mjs',
   'lab/ux-p0-010/link-http-ledger.cp048.test.mjs',
   'scripts/tests/cp056-link-cancel-race.test.mjs',
+  'scripts/tests/cp059-reissue-guard.test.mjs',
+  'scripts/tests/cp059-client-reissue.test.mjs',
   'lab/ux-p0-010/inventory-id-filter.cp050.test.mjs',
   'lab/ux-p0-010/catalog.pt.cp051.test.mjs',
   'lab/ux-p0-010/catalog-search-interop.cp051.test.mjs',
