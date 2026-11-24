@@ -16,7 +16,9 @@
     "check": "node --check web/app.js && node --check web/contract-adapter.js && npm run audit:imports && npm test",
     "test:p0:catalog": "node --test lab/ux-p0-010/catalog.pt.cp051.test.mjs && python lab/ux-p0-010/test_catalog.cp051.py",
     "test:p0:preview": "node --test scripts/test-p0-https-preview.cp053.mjs",
-    "gate:p0:lab": "node scripts/p0-lab-convergence.cp053.mjs"
+    "gate:p0:lab": "node scripts/p0-lab-convergence.cp053.mjs",
+    "test:p0:browser:tls": "python lab/ux-p0-010/test_native_browser_tls.cp060.py",
+    "gate:p0:lab:native-browser": "node scripts/p0-lab-native-browser.cp062.mjs"
   },
   "engines": {
     "node": ">=22"
