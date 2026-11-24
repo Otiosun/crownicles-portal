@@ -13,15 +13,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          fetch-depth: 3
+          fetch-depth: 4
           ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
       - name: Verify exact candidate parent
         run: |
-          test "$(git rev-parse HEAD~2)" = "8e9c5bbc26dde730f648cd90d0f87b45c4cda5cf"
-          test "$(git diff --name-only HEAD~2 HEAD)" = ".github/workflows/cp062-validation-only.yml"
+          test "$(git rev-parse HEAD~3)" = "8e9c5bbc26dde730f648cd90d0f87b45c4cda5cf"
+          test "$(git diff --name-only HEAD~3 HEAD)" = ".github/workflows/cp062-validation-only.yml"
           node --version
           google-chrome --version
       - name: Isolated dependencies
@@ -36,7 +36,7 @@ jobs:
           if [ ! -e /usr/bin/chromium ]; then
             sudo ln -s "$(command -v google-chrome)" /usr/bin/chromium
           fi
-      - name: Diagnose historical browser suite (not a combined gate)
+      - name: Execute exact combined gate after successful focused diagnostic
         run: |
           source "$RUNNER_TEMP/cp062-venv/bin/activate"
-          npm run test:p0:browser
+          npm run gate:p0:lab:native-browser
