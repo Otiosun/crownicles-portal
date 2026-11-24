@@ -35,10 +35,23 @@ export function parseTapSummaries(output){
  const o=Object.fromEntries(keys.map(k=>[k,parsed[k][0]]));
  const version=[...output.matchAll(/^TAP version 13\s*$/gm)];
  const plans=[...output.matchAll(/^1\.\.([0-9]+)\s*$/gm)];
- const topLevel=[...output.matchAll(/^ok ([0-9]+) - /gm)];
- if(version.length!==1||plans.length!==1||topLevel.length<1||Number(plans[0][1])<1||Number(plans[0][1])>o.tests)bad('CP055_TAP_PLAN_MISSING_OR_INCONSISTENT');
+ // CP056: a claimed TAP summary alone is not evidence that its tests ran.
+ // The previous gate accepted `ok 1 ... 1..210 # tests 210 # pass 210`.
+ // Count actual TAP test-point records, including nested node:test subtests;
+ // the unindented records must also account for the root plan sequentially.
+ // This is a structural check of local runner output, not cryptographic proof.
+ const testPoints=[...output.matchAll(/^( *)(ok|not ok) ([0-9]+) - ([^\r\n]*)$/gm)];
+ const rootPoints=testPoints.filter(m=>m[1].length===0);
+ const rootPlan=plans.length===1?Number(plans[0][1]):NaN;
+ if(version.length!==1||plans.length!==1||!Number.isSafeInteger(rootPlan)||rootPlan<1||rootPlan>o.tests)
+  bad('CP056_TAP_PLAN_MISSING_OR_INCONSISTENT');
  if(keys.some(k=>!Number.isSafeInteger(o[k]))||o.tests<1||o.pass!==o.tests||
   o.fail!==0||o.cancelled!==0||o.skipped!==0||o.todo!==0)bad('CP055_TAP_NOT_ALL_EXECUTED');
+ if(testPoints.some(m=>m[2]!=='ok'||/\s#\s*(?:SKIP|TODO)\b/i.test(m[4])))bad('CP056_TAP_NONPASS_RECORD');
+ if(rootPoints.length!==rootPlan||testPoints.length!==o.tests||
+    rootPoints.some((m,i)=>Number(m[3])!==i+1)||
+    testPoints.some(m=>!Number.isSafeInteger(Number(m[3]))||Number(m[3])<1||m[1].length%4!==0))
+  bad('CP056_TAP_RECORD_COUNT_MISMATCH');
  return Object.freeze(o);
 }
 export function inspectLabEvidence(stage,output){
