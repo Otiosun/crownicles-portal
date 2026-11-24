@@ -1,0 +1,42 @@
+name: CP062 isolated combined gate validation
+on:
+  push:
+    branches: [lab/cp062-validation-only-20261124]
+permissions:
+  contents: read
+jobs:
+  combined-lab:
+    if: github.repository == 'Otiosun/crownicles-portal' && github.ref == 'refs/heads/lab/cp062-validation-only-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify exact candidate parent
+        run: |
+          test "$(git rev-parse HEAD^)" = "8e9c5bbc26dde730f648cd90d0f87b45c4cda5cf"
+          test "$(git diff --name-only HEAD^ HEAD)" = ".github/workflows/cp062-validation-only.yml"
+          node --version
+          google-chrome --version
+      - name: Isolated dependencies
+        run: |
+          npm install --no-audit --no-fund --ignore-scripts
+          python3 -m venv "$RUNNER_TEMP/cp062-venv"
+          "$RUNNER_TEMP/cp062-venv/bin/pip" install --disable-pip-version-check playwright==1.57.0
+          if ! command -v certutil >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq libnss3-tools
+          fi
+          if [ ! -e /usr/bin/chromium ]; then
+            sudo ln -s "$(command -v google-chrome)" /usr/bin/chromium
+          fi
+      - name: Execute mandatory combined gate
+        run: |
+          source "$RUNNER_TEMP/cp062-venv/bin/activate"
+          npm run gate:p0:lab:native-browser
